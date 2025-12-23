@@ -168,8 +168,15 @@ function addWhitelistItem(value) {
   li.className = 'list-item';
   li.innerHTML = `
     <span>${escapeHtml(value)}</span>
-    <button onclick="removeFromWhitelist('${escapeHtml(value)}')">Remove</button>
+    <button class="btn-remove" data-value="${escapeHtml(value)}">Remove</button>
   `;
+  
+  // Attach event listener to the remove button
+  const removeBtn = li.querySelector('.btn-remove');
+  removeBtn.addEventListener('click', () => {
+    removeFromWhitelist(value);
+  });
+  
   whitelistItems.appendChild(li);
 }
 
@@ -178,8 +185,15 @@ function addBlacklistItem(value) {
   li.className = 'list-item';
   li.innerHTML = `
     <span>${escapeHtml(value)}</span>
-    <button onclick="removeFromBlacklist('${escapeHtml(value)}')">Remove</button>
+    <button class="btn-remove" data-value="${escapeHtml(value)}">Remove</button>
   `;
+  
+  // Attach event listener to the remove button
+  const removeBtn = li.querySelector('.btn-remove');
+  removeBtn.addEventListener('click', () => {
+    removeFromBlacklist(value);
+  });
+  
   blacklistItems.appendChild(li);
 }
 
@@ -238,9 +252,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Make functions available globally for onclick handlers
-window.removeFromWhitelist = removeFromWhitelist;
-window.removeFromBlacklist = removeFromBlacklist;
+// Functions no longer need to be global since we're using event listeners
 
 // Load activity logs
 function loadLogs() {

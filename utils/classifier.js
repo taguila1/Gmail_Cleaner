@@ -11,10 +11,38 @@ async function isWhitelisted(senderEmail, senderName) {
       const normalizedName = senderName?.toLowerCase() || '';
       
       const isWhitelisted = whitelist.some(item => {
-        const normalizedItem = item.toLowerCase();
-        return normalizedSender.includes(normalizedItem) || 
-               normalizedName.includes(normalizedItem) ||
-               normalizedItem.includes(normalizedSender);
+        const normalizedItem = item.toLowerCase().trim();
+        if (!normalizedItem) return false;
+        
+        const senderDomain = normalizedSender.includes('@') 
+          ? normalizedSender.split('@')[1] 
+          : '';
+        
+        // Exact match
+        if (normalizedSender === normalizedItem || normalizedName === normalizedItem) {
+          return true;
+        }
+        
+        // Domain match with @ prefix (e.g., '@dvusd.edu')
+        if (normalizedItem.startsWith('@') && senderDomain === normalizedItem.substring(1)) {
+          return true;
+        }
+        
+        // Domain match without @ prefix (e.g., 'dvusd.edu')
+        if (!normalizedItem.includes('@') && senderDomain === normalizedItem) {
+          return true;
+        }
+        
+        // Wildcard domain match (e.g., '*@dvusd.edu')
+        if (normalizedItem.includes('*@')) {
+          const domain = normalizedItem.split('@')[1];
+          if (senderDomain === domain) {
+            return true;
+          }
+        }
+        
+        // Substring match (for backward compatibility)
+        return normalizedSender.includes(normalizedItem) || normalizedName.includes(normalizedItem);
       });
       
       resolve(isWhitelisted);
@@ -33,10 +61,38 @@ async function isBlacklisted(senderEmail, senderName) {
       const normalizedName = senderName?.toLowerCase() || '';
       
       const isBlacklisted = blacklist.some(item => {
-        const normalizedItem = item.toLowerCase();
-        return normalizedSender.includes(normalizedItem) || 
-               normalizedName.includes(normalizedItem) ||
-               normalizedItem.includes(normalizedSender);
+        const normalizedItem = item.toLowerCase().trim();
+        if (!normalizedItem) return false;
+        
+        const senderDomain = normalizedSender.includes('@') 
+          ? normalizedSender.split('@')[1] 
+          : '';
+        
+        // Exact match
+        if (normalizedSender === normalizedItem || normalizedName === normalizedItem) {
+          return true;
+        }
+        
+        // Domain match with @ prefix (e.g., '@dvusd.edu')
+        if (normalizedItem.startsWith('@') && senderDomain === normalizedItem.substring(1)) {
+          return true;
+        }
+        
+        // Domain match without @ prefix (e.g., 'dvusd.edu')
+        if (!normalizedItem.includes('@') && senderDomain === normalizedItem) {
+          return true;
+        }
+        
+        // Wildcard domain match (e.g., '*@dvusd.edu')
+        if (normalizedItem.includes('*@')) {
+          const domain = normalizedItem.split('@')[1];
+          if (senderDomain === domain) {
+            return true;
+          }
+        }
+        
+        // Substring match (for backward compatibility)
+        return normalizedSender.includes(normalizedItem) || normalizedName.includes(normalizedItem);
       });
       
       resolve(isBlacklisted);

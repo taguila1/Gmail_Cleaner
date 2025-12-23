@@ -136,71 +136,83 @@ async function handleProcessEmails() {
   try {
     // Get settings to check preview mode and auto settings
     chrome.storage.sync.get(['settings'], (result) => {
-      const settings = result.settings || {
-        previewMode: true,
-        autoUnsubscribe: false,
-        autoDelete: false
-      };
-      
-      const previewOnly = settings.previewMode !== false;
-      const autoUnsubscribe = settings.autoUnsubscribe === true;
-      const autoDelete = settings.autoDelete === true;
-      
-      const statusMsg = previewOnly 
-        ? 'Processing emails (preview mode)...' 
-        : 'Processing emails (LIVE MODE - changes will be made)...';
-      showStatus(statusMsg, previewOnly ? 'info' : 'error');
-      btnProcessEmails.disabled = true;
-      
-      chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
-        if (!tab?.url?.includes('mail.google.com')) {
-          showStatus('Please open Gmail first', 'error');
-          btnProcessEmails.disabled = false;
-          return;
-        }
+      try {
+        const settings = result.settings || {
+          previewMode: true,
+          autoUnsubscribe: false,
+          autoDelete: false
+        };
         
-        // Show confirmation if not in preview mode
-        if (!previewOnly && (autoUnsubscribe || autoDelete)) {
-          const confirmed = confirm(
-            '⚠️ WARNING: This will make REAL changes to your emails!\n\n' +
-            `Auto Unsubscribe: ${autoUnsubscribe ? 'YES' : 'NO'}\n` +
-            `Auto Delete: ${autoDelete ? 'YES' : 'NO'}\n\n` +
-            'Are you sure you want to proceed?'
-          );
-          
-          if (!confirmed) {
+        const previewOnly = settings.previewMode !== false;
+        const autoUnsubscribe = settings.autoUnsubscribe === true;
+        const autoDelete = settings.autoDelete === true;
+        
+        const statusMsg = previewOnly 
+          ? 'Processing emails (preview mode)...' 
+          : 'Processing emails (LIVE MODE - changes will be made)...';
+        showStatus(statusMsg, previewOnly ? 'info' : 'error');
+        btnProcessEmails.disabled = true;
+        
+        chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
+          try {
+            if (!tab?.url?.includes('mail.google.com')) {
+              showStatus('Please open Gmail first', 'error');
+              btnProcessEmails.disabled = false;
+              return;
+            }
+            
+            // Show confirmation if not in preview mode
+            if (!previewOnly && (autoUnsubscribe || autoDelete)) {
+              const confirmed = confirm(
+                '⚠️ WARNING: This will make REAL changes to your emails!\n\n' +
+                `Auto Unsubscribe: ${autoUnsubscribe ? 'YES' : 'NO'}\n` +
+                `Auto Delete: ${autoDelete ? 'YES' : 'NO'}\n\n` +
+                'Are you sure you want to proceed?'
+              );
+              
+              if (!confirmed) {
+                btnProcessEmails.disabled = false;
+                showStatus('Cancelled', 'info');
+                return;
+              }
+            }
+            
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'processEmails',
+              options: {
+                maxEmails: 50,
+                previewOnly: previewOnly,
+                autoUnsubscribe: autoUnsubscribe,
+                autoDelete: autoDelete
+              }
+            }, async (response) => {
+              btnProcessEmails.disabled = false;
+              
+              if (chrome.runtime.lastError) {
+                showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+                return;
+              }
+              
+              if (response?.success) {
+                const { results } = response;
+                const previewText = previewOnly 
+                  ? `Preview: ${results.processed} processed, ${results.unsubscribed} would unsubscribe, ${results.deleted} would delete`
+                  : `Done: ${results.processed} processed, ${results.unsubscribed} unsubscribed, ${results.deleted} deleted`;
+                showStatus(previewText, previewOnly ? 'info' : 'success');
+                displayResults(results.emailDetails || []);
+                await loadStats();
+              } else {
+                showStatus(response?.message || 'Error processing emails', 'error');
+              }
+            });
+          } catch (error) {
             btnProcessEmails.disabled = false;
-            showStatus('Cancelled', 'info');
-            return;
+            showStatus('Error: ' + error.message, 'error');
           }
-        }
-        
-        chrome.tabs.sendMessage(tab.id, {
-          action: 'processEmails',
-          options: {
-            maxEmails: 50,
-            previewOnly: previewOnly,
-            autoUnsubscribe: autoUnsubscribe,
-            autoDelete: autoDelete
-          }
-        }, async (response) => {
-      btnProcessEmails.disabled = false;
-      
-      if (chrome.runtime.lastError) {
-        showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
-        return;
-      }
-      
-      if (response?.success) {
-        const { results } = response;
-        showStatus(
-          `Preview: ${results.processed} processed, ${results.unsubscribed} would unsubscribe, ${results.deleted} would delete`,
-          'info'
-        );
-        displayResults(results.emailDetails || []);
-        await loadStats();
-      } else {
-        showStatus(response?.message || 'Error processing emails', 'error');
+        });
+      } catch (error) {
+        btnProcessEmails.disabled = false;
+        showStatus('Error: ' + error.message, 'error');
       }
     });
   } catch (error) {

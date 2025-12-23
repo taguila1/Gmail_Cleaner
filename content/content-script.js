@@ -510,12 +510,50 @@ async function shouldDeleteEmail(emailData) {
       const senderEmail = (emailData.senderEmail || '').toLowerCase();
       const senderName = (emailData.senderName || '').toLowerCase();
       
-      // Check whitelist
+      // Check whitelist with domain matching support
       const isWhitelisted = whitelist.some(item => {
-        const normalizedItem = item.toLowerCase();
-        return senderEmail.includes(normalizedItem) || 
-               senderName.includes(normalizedItem) ||
-               normalizedItem.includes(senderEmail);
+        const normalizedItem = item.toLowerCase().trim();
+        
+        // Skip empty items
+        if (!normalizedItem) return false;
+        
+        // Extract domain from sender email
+        const senderDomain = senderEmail.includes('@') 
+          ? senderEmail.split('@')[1] 
+          : '';
+        
+        // Exact email match
+        if (senderEmail === normalizedItem || senderName === normalizedItem) {
+          return true;
+        }
+        
+        // Domain-only match (e.g., '@dvusd.edu' or 'dvusd.edu')
+        if (normalizedItem.startsWith('@')) {
+          const domain = normalizedItem.substring(1);
+          if (senderDomain === domain || senderEmail.endsWith(normalizedItem)) {
+            return true;
+          }
+        } else if (normalizedItem.includes('@') && !normalizedItem.includes('*')) {
+          // Exact domain match without @ prefix (e.g., 'dvusd.edu')
+          if (senderDomain === normalizedItem) {
+            return true;
+          }
+        }
+        
+        // Wildcard domain match (e.g., '*@dvusd.edu')
+        if (normalizedItem.includes('*@')) {
+          const domain = normalizedItem.split('@')[1];
+          if (senderDomain === domain) {
+            return true;
+          }
+        }
+        
+        // Substring match (for partial matches)
+        if (senderEmail.includes(normalizedItem) || senderName.includes(normalizedItem)) {
+          return true;
+        }
+        
+        return false;
       });
       
       if (isWhitelisted) {
@@ -523,12 +561,50 @@ async function shouldDeleteEmail(emailData) {
         return;
       }
       
-      // Check blacklist
+      // Check blacklist with domain matching support
       const isBlacklisted = blacklist.some(item => {
-        const normalizedItem = item.toLowerCase();
-        return senderEmail.includes(normalizedItem) || 
-               senderName.includes(normalizedItem) ||
-               normalizedItem.includes(senderEmail);
+        const normalizedItem = item.toLowerCase().trim();
+        
+        // Skip empty items
+        if (!normalizedItem) return false;
+        
+        // Extract domain from sender email
+        const senderDomain = senderEmail.includes('@') 
+          ? senderEmail.split('@')[1] 
+          : '';
+        
+        // Exact email match
+        if (senderEmail === normalizedItem || senderName === normalizedItem) {
+          return true;
+        }
+        
+        // Domain-only match (e.g., '@dvusd.edu' or 'dvusd.edu')
+        if (normalizedItem.startsWith('@')) {
+          const domain = normalizedItem.substring(1);
+          if (senderDomain === domain || senderEmail.endsWith(normalizedItem)) {
+            return true;
+          }
+        } else if (normalizedItem.includes('@') && !normalizedItem.includes('*')) {
+          // Exact domain match without @ prefix (e.g., 'dvusd.edu')
+          if (senderDomain === normalizedItem) {
+            return true;
+          }
+        }
+        
+        // Wildcard domain match (e.g., '*@dvusd.edu')
+        if (normalizedItem.includes('*@')) {
+          const domain = normalizedItem.split('@')[1];
+          if (senderDomain === domain) {
+            return true;
+          }
+        }
+        
+        // Substring match (for partial matches)
+        if (senderEmail.includes(normalizedItem) || senderName.includes(normalizedItem)) {
+          return true;
+        }
+        
+        return false;
       });
       
       if (isBlacklisted) {
@@ -599,11 +675,74 @@ function logActivity(type, emailData, reason = '') {
 }
 
 /**
+ * Check if email is whitelisted (helper function)
+ */
+async function checkIfWhitelisted(emailData) {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(['whitelist'], (result) => {
+      const whitelist = result.whitelist || [];
+      const senderEmail = (emailData.senderEmail || '').toLowerCase();
+      const senderName = (emailData.senderName || '').toLowerCase();
+      
+      const isWhitelisted = whitelist.some(item => {
+        const normalizedItem = item.toLowerCase().trim();
+        if (!normalizedItem) return false;
+        
+        const senderDomain = senderEmail.includes('@') 
+          ? senderEmail.split('@')[1] 
+          : '';
+        
+        // Exact match
+        if (senderEmail === normalizedItem || senderName === normalizedItem) {
+          return true;
+        }
+        
+        // Domain match with @ prefix (e.g., '@dvusd.edu')
+        if (normalizedItem.startsWith('@') && senderDomain === normalizedItem.substring(1)) {
+          return true;
+        }
+        
+        // Domain match without @ prefix (e.g., 'dvusd.edu')
+        if (!normalizedItem.includes('@') && senderDomain === normalizedItem) {
+          return true;
+        }
+        
+        // Wildcard domain match (e.g., '*@dvusd.edu')
+        if (normalizedItem.includes('*@')) {
+          const domain = normalizedItem.split('@')[1];
+          if (senderDomain === domain) {
+            return true;
+          }
+        }
+        
+        // Substring match (for backward compatibility)
+        return senderEmail.includes(normalizedItem) || senderName.includes(normalizedItem);
+      });
+      
+      resolve(isWhitelisted);
+    });
+  });
+}
+
+/**
  * Handle unsubscribe action
  */
 async function handleUnsubscribe() {
   try {
     const emailData = getCurrentEmailData();
+    
+    // Check whitelist BEFORE attempting unsubscribe
+    if (emailData) {
+      const isWhitelisted = await checkIfWhitelisted(emailData);
+      if (isWhitelisted) {
+        return {
+          success: false,
+          results: { found: [], executed: [], errors: [] },
+          message: 'Email is whitelisted - skipping unsubscribe'
+        };
+      }
+    }
+    
     const results = await processUnsubscribeForCurrentEmail();
     
     if (results.executed.length > 0) {
@@ -745,18 +884,27 @@ async function handleProcessEmails(options = {}) {
             const unsubscribeInfo = await checkUnsubscribeOptions();
             const deleteDecision = await shouldDeleteEmail(emailData);
             
+            // IMPORTANT: Check whitelist directly for unsubscribe protection
+            const isWhitelistedForUnsubscribe = await checkIfWhitelisted(emailData);
+            
             // Determine unsubscribe status
             let unsubscribeStatus = 'not_found';
             let unsubscribeReason = 'No unsubscribe option found';
             
             if (unsubscribeInfo.found.length > 0) {
-              if (unsubscribeInfo.found.some(f => f.type === 'gmail-native')) {
+              if (isWhitelistedForUnsubscribe) {
+                unsubscribeStatus = 'protected';
+                unsubscribeReason = 'Email is whitelisted - unsubscribe skipped';
+              } else if (unsubscribeInfo.found.some(f => f.type === 'gmail-native')) {
                 unsubscribeStatus = 'will_unsubscribe';
                 unsubscribeReason = 'Gmail native unsubscribe button found';
               } else if (unsubscribeInfo.found.some(f => f.type === 'link')) {
                 unsubscribeStatus = 'will_unsubscribe';
                 unsubscribeReason = 'Unsubscribe link found in email';
               }
+            } else if (isWhitelistedForUnsubscribe) {
+              unsubscribeStatus = 'protected';
+              unsubscribeReason = 'Email is whitelisted';
             }
             
             // Determine delete status
@@ -793,7 +941,10 @@ async function handleProcessEmails(options = {}) {
             });
             
             // Execute actions if not in preview mode
+            // IMPORTANT: Whitelist check already done above - unsubscribeStatus will be 'protected' for whitelisted emails
+            
             if (autoUnsubscribe && !previewOnly && unsubscribeStatus === 'will_unsubscribe') {
+              // Only unsubscribe if status is 'will_unsubscribe' (not 'protected' for whitelisted)
               const unsubscribeResult = await handleUnsubscribe();
               if (unsubscribeResult.success) {
                 processResults.unsubscribed++;
@@ -804,12 +955,18 @@ async function handleProcessEmails(options = {}) {
                   : `Auto-unsubscribed via ${executedType} link`;
                 logActivity('unsubscribed', emailData, reason);
               } else {
-                // Log failed unsubscribe attempt
-                logActivity('failed', emailData, unsubscribeResult.message || 'Unsubscribe failed during batch processing');
+                // Log failed unsubscribe attempt (unless it was skipped due to whitelist)
+                if (!unsubscribeResult.message?.includes('whitelisted')) {
+                  logActivity('failed', emailData, unsubscribeResult.message || 'Unsubscribe failed during batch processing');
+                }
               }
               await delay(settings.rateLimitDelay);
+            } else if (autoUnsubscribe && !previewOnly && unsubscribeStatus === 'protected') {
+              // Whitelisted emails are skipped (already marked as protected above)
+              // No action needed - they won't be unsubscribed
             }
             
+            // IMPORTANT: deleteDecision already checks whitelist, so shouldDelete will be false for whitelisted emails
             if (autoDelete && deleteDecision.shouldDelete && !previewOnly) {
               const deleteResult = await deleteCurrentEmail();
               if (deleteResult.success) {
@@ -1022,10 +1179,38 @@ async function handleDeleteUnread(options = {}) {
               const senderName = (emailData.senderName || '').toLowerCase();
               
               const isWhitelisted = whitelist.some(item => {
-                const normalizedItem = item.toLowerCase();
-                return senderEmail.includes(normalizedItem) || 
-                       senderName.includes(normalizedItem) ||
-                       normalizedItem.includes(senderEmail);
+                const normalizedItem = item.toLowerCase().trim();
+                if (!normalizedItem) return false;
+                
+                const senderDomain = senderEmail.includes('@') 
+                  ? senderEmail.split('@')[1] 
+                  : '';
+                
+                // Exact match
+                if (senderEmail === normalizedItem || senderName === normalizedItem) {
+                  return true;
+                }
+                
+                // Domain match with @ prefix
+                if (normalizedItem.startsWith('@') && senderDomain === normalizedItem.substring(1)) {
+                  return true;
+                }
+                
+                // Domain match without @ prefix
+                if (!normalizedItem.includes('@') && senderDomain === normalizedItem) {
+                  return true;
+                }
+                
+                // Wildcard domain match
+                if (normalizedItem.includes('*@')) {
+                  const domain = normalizedItem.split('@')[1];
+                  if (senderDomain === domain) {
+                    return true;
+                  }
+                }
+                
+                // Substring match
+                return senderEmail.includes(normalizedItem) || senderName.includes(normalizedItem);
               });
               
               if (isWhitelisted) {
