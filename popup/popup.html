@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=700, initial-scale=1.0">
+  <title>Gmail Cleaner</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    html {
+      width: 700px;
+      min-width: 700px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Gmail Cleaner</h1>
+      <p class="subtitle">Clean up your inbox intelligently</p>
+    </header>
+
+    <div class="stats-section">
+      <div class="stat-item">
+        <span class="stat-value" id="stat-unsubscribed">0</span>
+        <span class="stat-label">Unsubscribed</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="stat-deleted">0</span>
+        <span class="stat-label">Deleted</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="stat-processed">0</span>
+        <span class="stat-label">Processed</span>
+      </div>
+    </div>
+
+    <div class="results-section" id="results-section" style="display: none;">
+      <div class="results-header">
+        <h2>Preview Results</h2>
+        <button id="btn-clear-results" class="btn-clear">Clear</button>
+      </div>
+      <div class="results-table-container">
+        <table class="results-table" id="results-table">
+          <thead>
+            <tr>
+              <th>From</th>
+              <th>Subject</th>
+              <th>Unsubscribe</th>
+              <th>Delete</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="results-tbody">
+            <!-- Results will be populated here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="actions-section">
+      <h2>Quick Actions</h2>
+      
+      <button id="btn-unsubscribe" class="btn btn-primary">
+        <span class="btn-icon">📧</span>
+        Unsubscribe from Current Email
+      </button>
+      
+      <button id="btn-process-emails" class="btn btn-secondary">
+        <span class="btn-icon">🔄</span>
+        Process Emails
+      </button>
+      
+      <button id="btn-delete-unread" class="btn btn-danger">
+        <span class="btn-icon">📬</span>
+        Delete Unread Emails
+      </button>
+      
+      <button id="btn-process-delete" class="btn btn-danger" style="display: none;">
+        <span class="btn-icon">🗑️</span>
+        Process & Delete (Confirm First!)
+      </button>
+    </div>
+
+    <div class="current-email-section" id="current-email-section" style="display: none;">
+      <h3>Current Email</h3>
+      <div class="email-info">
+        <p><strong>From:</strong> <span id="email-from">-</span></p>
+        <p><strong>Subject:</strong> <span id="email-subject">-</span></p>
+        <div class="email-actions">
+          <button id="btn-add-whitelist" class="btn btn-small">Add to Whitelist</button>
+          <button id="btn-add-blacklist" class="btn btn-small">Add to Blacklist</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <a href="#" id="link-settings" class="settings-link">⚙️ Settings</a>
+    </div>
+
+    <div class="status-message" id="status-message"></div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
+

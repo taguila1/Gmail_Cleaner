@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gmail Cleaner - Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Gmail Cleaner Settings</h1>
+      <p class="subtitle">Configure your email cleaning preferences</p>
+    </header>
+
+    <div class="settings-section">
+      <h2>General Settings</h2>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="preview-mode">
+          <span>Preview Mode (recommended)</span>
+        </label>
+        <p class="setting-description">Show what would be deleted before actually deleting</p>
+      </div>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="auto-unsubscribe">
+          <span>Auto Unsubscribe</span>
+        </label>
+        <p class="setting-description">Automatically unsubscribe when processing emails</p>
+      </div>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="auto-delete">
+          <span>Auto Delete (use with caution)</span>
+        </label>
+        <p class="setting-description">Automatically delete emails classified as junk</p>
+      </div>
+      
+      <div class="setting-item">
+        <label for="rate-limit">Rate Limit Delay (ms):</label>
+        <input type="number" id="rate-limit" min="500" max="5000" step="100" value="1000">
+        <p class="setting-description">Delay between actions to avoid rate limiting</p>
+      </div>
+      
+      <div class="setting-item">
+        <label for="confidence-threshold">Minimum Confidence for Delete:</label>
+        <input type="range" id="confidence-threshold" min="0" max="1" step="0.1" value="0.7">
+        <span id="confidence-value">0.7</span>
+        <p class="setting-description">Higher values = more conservative (fewer deletions)</p>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>Whitelist</h2>
+      <p class="section-description">Emails from these senders will NEVER be deleted</p>
+      
+      <div class="list-controls">
+        <input type="text" id="whitelist-input" placeholder="Enter email or domain (e.g., example.com)">
+        <button id="btn-add-whitelist" class="btn btn-primary">Add</button>
+      </div>
+      
+      <ul id="whitelist-items" class="list-items"></ul>
+    </div>
+
+    <div class="settings-section">
+      <h2>Blacklist</h2>
+      <p class="section-description">Emails from these senders will be considered for deletion</p>
+      
+      <div class="list-controls">
+        <input type="text" id="blacklist-input" placeholder="Enter email or domain (e.g., spam.com)">
+        <button id="btn-add-blacklist" class="btn btn-secondary">Add</button>
+      </div>
+      
+      <ul id="blacklist-items" class="list-items"></ul>
+    </div>
+
+    <div class="settings-section">
+      <h2>Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-number" id="stat-unsubscribed">0</div>
+          <div class="stat-label">Unsubscribed</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="stat-deleted">0</div>
+          <div class="stat-label">Deleted</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="stat-processed">0</div>
+          <div class="stat-label">Processed</div>
+        </div>
+      </div>
+      <button id="btn-reset-stats" class="btn btn-danger">Reset Statistics</button>
+    </div>
+
+    <div class="settings-section">
+      <h2>Activity Logs</h2>
+      
+      <div class="log-section">
+        <div class="log-header">
+          <h3>Auto-Unsubscribed Emails</h3>
+          <div class="log-actions">
+            <button id="btn-clear-unsubscribed" class="btn btn-small btn-secondary">Clear</button>
+            <button id="btn-export-unsubscribed" class="btn btn-small btn-secondary">Export</button>
+          </div>
+        </div>
+        <div class="log-container" id="log-unsubscribed">
+          <p class="log-empty">No auto-unsubscribed emails yet</p>
+        </div>
+      </div>
+
+      <div class="log-section">
+        <div class="log-header">
+          <h3>Auto-Deleted Emails</h3>
+          <div class="log-actions">
+            <button id="btn-clear-deleted" class="btn btn-small btn-secondary">Clear</button>
+            <button id="btn-export-deleted" class="btn btn-small btn-secondary">Export</button>
+          </div>
+        </div>
+        <div class="log-container" id="log-deleted">
+          <p class="log-empty">No auto-deleted emails yet</p>
+        </div>
+      </div>
+
+      <div class="log-section">
+        <div class="log-header">
+          <h3>Failed Unsubscribe Attempts</h3>
+          <p class="section-description">Emails that couldn't be unsubscribed from (for processor improvement)</p>
+          <div class="log-actions">
+            <button id="btn-clear-failed" class="btn btn-small btn-secondary">Clear</button>
+            <button id="btn-export-failed" class="btn btn-small btn-secondary">Export</button>
+          </div>
+        </div>
+        <div class="log-container" id="log-failed">
+          <p class="log-empty">No failed unsubscribe attempts yet</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-message" id="status-message"></div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
+
