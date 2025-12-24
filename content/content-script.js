@@ -39,17 +39,45 @@ function initializeGmailCleaner() {
       return true;
     }
     
-    if (request.action === 'deleteUnread') {
-      handleDeleteUnread(request.options).then(result => {
+    if (request.action === 'getCurrentEmail') {
+      const emailData = getCurrentEmailData();
+      sendResponse({ emailData });
+      return false;
+    }
+    
+    if (request.action === 'archiveEmail') {
+      archiveCurrentEmail().then(result => {
         sendResponse(result);
       });
       return true;
     }
     
-    if (request.action === 'getCurrentEmail') {
-      const emailData = getCurrentEmailData();
-      sendResponse({ emailData });
-      return false;
+    if (request.action === 'markAsUnread') {
+      markEmailAsUnread().then(result => {
+        sendResponse(result);
+      });
+      return true;
+    }
+    
+    if (request.action === 'pauseProcessing') {
+      chrome.storage.local.set({ processingPaused: true }, () => {
+        sendResponse({ success: true });
+      });
+      return true;
+    }
+    
+    if (request.action === 'resumeProcessing') {
+      chrome.storage.local.set({ processingPaused: false }, () => {
+        sendResponse({ success: true });
+      });
+      return true;
+    }
+    
+    if (request.action === 'stopProcessing') {
+      chrome.storage.local.set({ processingStopped: true, processingPaused: false }, () => {
+        sendResponse({ success: true });
+      });
+      return true;
     }
   });
 }
@@ -642,6 +670,133 @@ async function shouldDeleteEmail(emailData) {
 }
 
 /**
+ * Evaluate advanced filtering rules
+ */
+async function evaluateFilteringRules(emailData) {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(['filterRules'], (result) => {
+      const rules = result.filterRules || [];
+      const actions = {
+        shouldUnsubscribe: false,
+        shouldDelete: false,
+        shouldArchive: false,
+        shouldMarkAsRead: false,
+        shouldMarkAsUnread: false,
+        shouldStar: false,
+        priority: 0
+      };
+      
+      // Sort rules by priority (higher first)
+      const sortedRules = [...rules].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+      
+      for (const rule of sortedRules) {
+        if (!rule.enabled) continue;
+        
+        const conditions = rule.conditions || [];
+        if (conditions.length === 0) continue;
+        
+        // Check if all conditions match (AND logic)
+        const allMatch = conditions.every(condition => {
+          const { field, operator, value } = condition;
+          let fieldValue = '';
+          
+          switch (field) {
+            case 'senderEmail':
+              fieldValue = (emailData.senderEmail || '').toLowerCase();
+              break;
+            case 'senderName':
+              fieldValue = (emailData.senderName || '').toLowerCase();
+              break;
+            case 'subject':
+              fieldValue = (emailData.subject || '').toLowerCase();
+              break;
+            case 'body':
+              fieldValue = (emailData.body || '').toLowerCase();
+              break;
+            case 'hasAttachments':
+              fieldValue = emailData.hasAttachments ? 'true' : 'false';
+              break;
+            case 'isStarred':
+              fieldValue = emailData.isStarred ? 'true' : 'false';
+              break;
+            case 'isImportant':
+              fieldValue = emailData.isImportant ? 'true' : 'false';
+              break;
+            case 'daysOld':
+              if (emailData.date) {
+                const emailDate = new Date(emailData.date);
+                const daysOld = Math.floor((Date.now() - emailDate.getTime()) / (1000 * 60 * 60 * 24));
+                fieldValue = daysOld.toString();
+              }
+              break;
+          }
+          
+          const conditionValue = (value || '').toLowerCase();
+          
+          switch (operator) {
+            case 'contains':
+              return fieldValue.includes(conditionValue);
+            case 'notContains':
+              return !fieldValue.includes(conditionValue);
+            case 'equals':
+              return fieldValue === conditionValue;
+            case 'startsWith':
+              return fieldValue.startsWith(conditionValue);
+            case 'endsWith':
+              return fieldValue.endsWith(conditionValue);
+            case 'greaterThan':
+              return parseFloat(fieldValue) > parseFloat(conditionValue);
+            case 'lessThan':
+              return parseFloat(fieldValue) < parseFloat(conditionValue);
+            default:
+              return false;
+          }
+        });
+        
+        if (allMatch) {
+          // Apply rule actions
+          if (rule.actions.unsubscribe) actions.shouldUnsubscribe = true;
+          if (rule.actions.delete) actions.shouldDelete = true;
+          if (rule.actions.archive) actions.shouldArchive = true;
+          if (rule.actions.markAsRead) actions.shouldMarkAsRead = true;
+          if (rule.actions.star) actions.shouldStar = true;
+          
+          // Stop at first matching rule if stopOnMatch is true
+          if (rule.stopOnMatch) break;
+        }
+      }
+      
+      resolve(actions);
+    });
+  });
+}
+
+/**
+ * Track sender frequency for analytics
+ */
+function trackSenderFrequency(senderEmail, senderName) {
+  chrome.storage.local.get(['senderAnalytics'], (result) => {
+    const analytics = result.senderAnalytics || {};
+    const key = senderEmail.toLowerCase();
+    
+    if (!analytics[key]) {
+      analytics[key] = {
+        email: senderEmail,
+        name: senderName,
+        count: 0,
+        firstSeen: new Date().toISOString(),
+        lastSeen: new Date().toISOString()
+      };
+    }
+    
+    analytics[key].count++;
+    analytics[key].lastSeen = new Date().toISOString();
+    
+    chrome.storage.local.set({ senderAnalytics: analytics });
+  });
+}
+
+/**
  * Log activity to storage
  */
 function logActivity(type, emailData, reason = '') {
@@ -842,7 +997,47 @@ async function handleProcessEmails(options = {}) {
         
         const emailsToProcess = emailElements.slice(0, maxEmails);
         
+        // Reset pause/stop flags
+        chrome.storage.local.set({ processingPaused: false, processingStopped: false });
+        
         for (let i = 0; i < emailsToProcess.length; i++) {
+          // Check for pause/stop
+          const state = await new Promise((resolve) => {
+            chrome.storage.local.get(['processingPaused', 'processingStopped'], (result) => {
+              resolve({
+                paused: result.processingPaused === true,
+                stopped: result.processingStopped === true
+              });
+            });
+          });
+          
+          if (state.stopped) {
+            processResults.stopped = true;
+            processResults.message = 'Processing stopped by user';
+            break;
+          }
+          
+          // Wait if paused
+          while (state.paused && !state.stopped) {
+            await delay(500);
+            const newState = await new Promise((resolve) => {
+              chrome.storage.local.get(['processingPaused', 'processingStopped'], (result) => {
+                resolve({
+                  paused: result.processingPaused === true,
+                  stopped: result.processingStopped === true
+                });
+              });
+            });
+            if (newState.stopped) {
+              processResults.stopped = true;
+              processResults.message = 'Processing stopped by user';
+              break;
+            }
+            if (!newState.paused) break;
+          }
+          
+          if (state.stopped) break;
+          
           const emailEl = emailsToProcess[i];
           
           try {
@@ -872,9 +1067,10 @@ async function handleProcessEmails(options = {}) {
                 index: i,
                 sender: 'Unknown',
                 subject: 'Could not extract',
-                unsubscribeStatus: 'error',
-                deleteStatus: 'error',
-                reason: 'Could not extract email data',
+                unsubscribeStatus: 'not_found',
+                unsubscribeReason: 'Could not extract email data',
+                deleteStatus: 'uncertain',
+                deleteReason: 'Could not extract email data - skipped',
                 confidence: 0
               });
               continue;
@@ -887,11 +1083,20 @@ async function handleProcessEmails(options = {}) {
             // IMPORTANT: Check whitelist directly for unsubscribe protection
             const isWhitelistedForUnsubscribe = await checkIfWhitelisted(emailData);
             
-            // Determine unsubscribe status
+            // Evaluate advanced filtering rules
+            const ruleActions = await evaluateFilteringRules(emailData);
+            
+            // Initialize status variables
             let unsubscribeStatus = 'not_found';
             let unsubscribeReason = 'No unsubscribe option found';
+            let deleteStatus = 'will_not_delete';
+            let deleteReason = deleteDecision.reason || 'Does not meet deletion criteria';
             
-            if (unsubscribeInfo.found.length > 0) {
+            // Determine unsubscribe status - Check rules first (rules can override normal logic)
+            if (ruleActions && ruleActions.shouldUnsubscribe && !isWhitelistedForUnsubscribe) {
+              unsubscribeStatus = 'will_unsubscribe';
+              unsubscribeReason = 'Matched filtering rule';
+            } else if (unsubscribeInfo.found.length > 0) {
               if (isWhitelistedForUnsubscribe) {
                 unsubscribeStatus = 'protected';
                 unsubscribeReason = 'Email is whitelisted - unsubscribe skipped';
@@ -907,11 +1112,14 @@ async function handleProcessEmails(options = {}) {
               unsubscribeReason = 'Email is whitelisted';
             }
             
-            // Determine delete status
-            let deleteStatus = 'will_not_delete';
-            let deleteReason = deleteDecision.reason || 'Does not meet deletion criteria';
-            
-            if (deleteDecision.shouldDelete) {
+            // Determine delete status - Check rules first (rules can override normal logic)
+            if (ruleActions && ruleActions.shouldDelete) {
+              deleteStatus = 'will_delete';
+              deleteReason = 'Matched filtering rule';
+            } else if (ruleActions && ruleActions.shouldArchive) {
+              deleteStatus = 'will_delete'; // Archive is treated as delete for status
+              deleteReason = 'Matched filtering rule (archive)';
+            } else if (deleteDecision.shouldDelete) {
               deleteStatus = 'will_delete';
               deleteReason = deleteDecision.reason || 'Meets deletion criteria';
             } else if (deleteDecision.reason === 'whitelisted') {
@@ -968,28 +1176,63 @@ async function handleProcessEmails(options = {}) {
             
             // IMPORTANT: deleteDecision already checks whitelist, so shouldDelete will be false for whitelisted emails
             if (autoDelete && deleteDecision.shouldDelete && !previewOnly) {
-              const deleteResult = await deleteCurrentEmail();
-              if (deleteResult.success) {
-                processResults.deleted++;
-                // Log auto-delete
-                logActivity('deleted', emailData, `Auto-deleted: ${deleteDecision.reason || 'Met deletion criteria'} (confidence: ${(deleteDecision.confidence * 100).toFixed(0)}%)`);
+              // Check if archive is enabled instead of delete
+              const useArchive = settings.useArchiveInsteadOfDelete === true;
+              
+              if (useArchive) {
+                const archiveResult = await archiveCurrentEmail();
+                if (archiveResult.success) {
+                  processResults.deleted++; // Count as deleted for stats
+                  // Log auto-archive
+                  logActivity('deleted', emailData, `Auto-archived: ${deleteDecision.reason || 'Met deletion criteria'} (confidence: ${(deleteDecision.confidence * 100).toFixed(0)}%)`);
+                }
+              } else {
+                const deleteResult = await deleteCurrentEmail();
+                if (deleteResult.success) {
+                  processResults.deleted++;
+                  // Log auto-delete
+                  logActivity('deleted', emailData, `Auto-deleted: ${deleteDecision.reason || 'Met deletion criteria'} (confidence: ${(deleteDecision.confidence * 100).toFixed(0)}%)`);
+                }
               }
               await delay(settings.rateLimitDelay);
             }
             
             processResults.processed++;
             
+            // Track sender frequency for analytics
+            if (emailData.senderEmail) {
+              trackSenderFrequency(emailData.senderEmail, emailData.senderName || '');
+            }
+            
           } catch (error) {
             processResults.errors.push({ index: i, error: error.message });
-            processResults.emailDetails.push({
-              index: i,
-              sender: 'Error',
-              subject: 'Processing failed',
-              unsubscribeStatus: 'error',
-              deleteStatus: 'error',
-              reason: error.message,
-              confidence: 0
-            });
+            // Only add to emailDetails if it's a critical error
+            // For minor errors, we'll just log it
+            if (error.message && !error.message.includes('timeout') && !error.message.includes('not found')) {
+              processResults.emailDetails.push({
+                index: i,
+                sender: 'Error',
+                subject: 'Processing failed',
+                unsubscribeStatus: 'error',
+                unsubscribeReason: `Error: ${error.message}`,
+                deleteStatus: 'error',
+                deleteReason: `Error: ${error.message}`,
+                confidence: 0
+              });
+            } else {
+              // For non-critical errors, mark as skipped
+              processResults.skipped++;
+              processResults.emailDetails.push({
+                index: i,
+                sender: 'Unknown',
+                subject: 'Skipped',
+                unsubscribeStatus: 'not_found',
+                unsubscribeReason: 'Email processing skipped',
+                deleteStatus: 'uncertain',
+                deleteReason: 'Email processing skipped',
+                confidence: 0
+              });
+            }
             console.error(`Error processing email ${i}:`, error);
           }
         }
@@ -1098,6 +1341,95 @@ async function deleteCurrentEmail() {
     }
     
     return { success: false, message: 'Delete button not found' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Archive currently open email
+ */
+async function archiveCurrentEmail() {
+  try {
+    const archiveSelectors = [
+      '[aria-label*="Archive" i]',
+      '[data-tooltip*="Archive" i]',
+      '.T-I-J3[data-tooltip*="Archive" i]',
+      'div[role="button"][aria-label*="Archive" i]',
+      '[aria-label*="Move to Inbox" i]' // Sometimes archive is shown as "Move to Inbox" when viewing archived
+    ];
+    
+    for (const selector of archiveSelectors) {
+      const archiveButton = document.querySelector(selector);
+      if (archiveButton && archiveButton.offsetParent !== null) {
+        archiveButton.click();
+        await delay(300);
+        return { success: true };
+      }
+    }
+    
+    // Try keyboard shortcut (e) for archive
+    const emailView = document.querySelector('[data-message-id]');
+    if (emailView) {
+      emailView.focus();
+      const keyEvent = new KeyboardEvent('keydown', {
+        key: 'e',
+        code: 'KeyE',
+        keyCode: 69,
+        which: 69,
+        bubbles: true,
+        cancelable: true
+      });
+      document.dispatchEvent(keyEvent);
+      await delay(300);
+      return { success: true };
+    }
+    
+    return { success: false, message: 'Archive button not found' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Mark email as unread
+ */
+async function markEmailAsUnread() {
+  try {
+    const markUnreadSelectors = [
+      '[aria-label*="Mark as unread" i]',
+      '[data-tooltip*="Mark as unread" i]',
+      'div[role="button"][aria-label*="Mark as unread" i]'
+    ];
+    
+    for (const selector of markUnreadSelectors) {
+      const button = document.querySelector(selector);
+      if (button && button.offsetParent !== null) {
+        button.click();
+        await delay(300);
+        return { success: true };
+      }
+    }
+    
+    // Try keyboard shortcut (Shift+U) for mark as unread
+    const emailView = document.querySelector('[data-message-id]');
+    if (emailView) {
+      emailView.focus();
+      const keyEvent = new KeyboardEvent('keydown', {
+        key: 'u',
+        code: 'KeyU',
+        keyCode: 85,
+        which: 85,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true
+      });
+      document.dispatchEvent(keyEvent);
+      await delay(300);
+      return { success: true };
+    }
+    
+    return { success: false, message: 'Mark as unread button not found' };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -1222,9 +1554,17 @@ async function handleDeleteUnread(options = {}) {
               }
             }
             
-            // Delete the email
-            const deleteResult = await deleteCurrentEmail();
-            if (deleteResult.success) {
+            // Delete or archive the email
+            const useArchive = settings.useArchiveInsteadOfDelete === true;
+            let actionResult;
+            
+            if (useArchive) {
+              actionResult = await archiveCurrentEmail();
+            } else {
+              actionResult = await deleteCurrentEmail();
+            }
+            
+            if (actionResult.success) {
               deleteResults.deleted++;
               // Log deletion
               logActivity('deleted', emailData, `Deleted unread email${respectWhitelist ? ' (whitelist checked)' : ' (all unread)'}`);

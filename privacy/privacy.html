@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Gmail Cleaner</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+      line-height: 1.6;
+      color: #202124;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      color: #1a73e8;
+      margin-bottom: 10px;
+    }
+    
+    .last-updated {
+      color: #5f6368;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+    
+    h2 {
+      color: #202124;
+      margin-top: 30px;
+      margin-bottom: 15px;
+      font-size: 20px;
+    }
+    
+    p {
+      margin-bottom: 15px;
+    }
+    
+    ul {
+      margin-left: 20px;
+      margin-bottom: 15px;
+    }
+    
+    li {
+      margin-bottom: 8px;
+    }
+    
+    .highlight {
+      background: #e8f0fe;
+      padding: 15px;
+      border-left: 4px solid #1a73e8;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      text-align: center;
+      color: #5f6368;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Privacy Policy</h1>
+    <p class="last-updated">Last Updated: <span id="last-updated-date"></span></p>
+    
+    <div class="highlight">
+      <strong>🔒 Your Privacy Matters</strong><br>
+      Gmail Cleaner processes all data locally in your browser. We do not collect, store, or transmit any of your email data to external servers.
+    </div>
+    
+    <h2>Data Collection</h2>
+    <p><strong>We do NOT collect:</strong></p>
+    <ul>
+      <li>Email content or body text</li>
+      <li>Email addresses or sender information</li>
+      <li>Personal information</li>
+      <li>Browsing history</li>
+      <li>Any data that leaves your device</li>
+    </ul>
+    
+    <h2>Data Storage</h2>
+    <p>All data is stored locally on your device using Chrome's storage APIs:</p>
+    <ul>
+      <li><strong>Settings:</strong> Your preferences (whitelist, blacklist, configuration) are stored in Chrome's sync storage (encrypted by Chrome)</li>
+      <li><strong>Statistics:</strong> Local counts of processed emails (numbers only, no email content)</li>
+      <li><strong>Activity Logs:</strong> Optional logs of actions taken (sender email addresses only, stored locally)</li>
+    </ul>
+    
+    <h2>Permissions</h2>
+    <p>Gmail Cleaner requires the following permissions:</p>
+    <ul>
+      <li><strong>storage:</strong> To save your settings and preferences</li>
+      <li><strong>tabs:</strong> To detect when Gmail is open</li>
+      <li><strong>activeTab:</strong> To interact with Gmail pages</li>
+      <li><strong>alarms:</strong> For scheduled cleanup (if enabled)</li>
+      <li><strong>https://mail.google.com/*:</strong> To access Gmail pages</li>
+    </ul>
+    <p>All permissions are used solely for the extension's functionality and no data is transmitted externally.</p>
+    
+    <h2>Third-Party Services</h2>
+    <p>Gmail Cleaner does not use any third-party analytics, tracking, or data collection services. All processing happens entirely within your browser.</p>
+    
+    <h2>Unsubscribe Requests</h2>
+    <p>When you use the unsubscribe feature, the extension:</p>
+    <ul>
+      <li>Sends unsubscribe requests directly to the email sender's server</li>
+      <li>Does not store or log the content of these requests</li>
+      <li>Respects CAN-SPAM Act requirements</li>
+    </ul>
+    
+    <h2>Data Deletion</h2>
+    <p>You can delete all stored data at any time by:</p>
+    <ul>
+      <li>Clearing extension data in Chrome settings</li>
+      <li>Uninstalling the extension</li>
+      <li>Using the "Clear" buttons in the extension's settings page</li>
+    </ul>
+    
+    <h2>Updates</h2>
+    <p>This privacy policy may be updated periodically. The "Last Updated" date at the top indicates when changes were made. Continued use of the extension after updates constitutes acceptance of the updated policy.</p>
+    
+    <h2>Contact</h2>
+    <p>If you have questions about this privacy policy, please open an issue on our <a href="https://github.com/taguila1/Gmail_Cleaner" target="_blank">GitHub repository</a>.</p>
+    
+    <div class="footer">
+      <p>Gmail Cleaner is not affiliated with Google or Gmail.</p>
+      <p>This extension is provided "as is" without warranty of any kind.</p>
+    </div>
+  </div>
+  
+  <script src="privacy.js"></script>
+</body>
+</html>
+

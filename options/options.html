@@ -52,6 +52,22 @@
         <span id="confidence-value">0.7</span>
         <p class="setting-description">Higher values = more conservative (fewer deletions)</p>
       </div>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="use-archive">
+          <span>Archive Instead of Delete</span>
+        </label>
+        <p class="setting-description">Archive emails instead of deleting them (safer option)</p>
+      </div>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="advanced-user">
+          <span>I'm an advanced user</span>
+        </label>
+        <p class="setting-description">Show advanced features and settings</p>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -78,7 +94,66 @@
       <ul id="blacklist-items" class="list-items"></ul>
     </div>
 
-    <div class="settings-section">
+    <div class="settings-section advanced-section">
+      <h2>Scheduled Automation</h2>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="scheduled-cleanup-enabled">
+          <span>Enable Scheduled Cleanup</span>
+        </label>
+        <p class="setting-description">Automatically process emails on a schedule</p>
+      </div>
+      
+      <div id="scheduled-cleanup-options" style="display: none; margin-left: 20px;">
+        <div class="setting-item">
+          <label for="cleanup-frequency">Frequency:</label>
+          <select id="cleanup-frequency">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </div>
+        
+        <div class="setting-item">
+          <label for="cleanup-time">Time:</label>
+          <input type="time" id="cleanup-time" value="09:00">
+          <p class="setting-description">Time to run scheduled cleanup (24-hour format)</p>
+        </div>
+        
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="scheduled-auto-unsubscribe">
+            <span>Auto Unsubscribe</span>
+          </label>
+          <p class="setting-description">Automatically unsubscribe during scheduled cleanup</p>
+        </div>
+        
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="scheduled-auto-delete">
+            <span>Auto Delete</span>
+          </label>
+          <p class="setting-description">Automatically delete/archive during scheduled cleanup</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section advanced-section">
+      <h2>Data Management</h2>
+      
+      <div class="setting-item">
+        <button id="btn-export-settings" class="btn btn-primary">Export Settings</button>
+        <p class="setting-description">Export all settings, whitelist, and blacklist to a JSON file</p>
+      </div>
+      
+      <div class="setting-item">
+        <input type="file" id="import-settings-file" accept=".json" style="display: none;">
+        <button id="btn-import-settings" class="btn btn-secondary">Import Settings</button>
+        <p class="setting-description">Import settings from a previously exported JSON file</p>
+      </div>
+    </div>
+
+    <div class="settings-section advanced-section">
       <h2>Statistics</h2>
       <div class="stats-grid">
         <div class="stat-box">
@@ -97,7 +172,7 @@
       <button id="btn-reset-stats" class="btn btn-danger">Reset Statistics</button>
     </div>
 
-    <div class="settings-section">
+    <div class="settings-section advanced-section">
       <h2>Activity Logs</h2>
       
       <div class="log-section">
@@ -141,7 +216,123 @@
       </div>
     </div>
 
+    <div class="settings-section advanced-section">
+      <h2>Analytics Dashboard</h2>
+      
+      <div class="setting-item">
+        <button id="btn-refresh-analytics" class="btn btn-primary">Refresh Analytics</button>
+        <button id="btn-clear-analytics" class="btn btn-secondary">Clear Analytics</button>
+      </div>
+      
+      <div id="analytics-container">
+        <div class="analytics-stats">
+          <h3>Top Senders</h3>
+          <div class="analytics-table-container">
+            <table class="analytics-table" id="analytics-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email Count</th>
+                  <th>First Seen</th>
+                </tr>
+              </thead>
+              <tbody id="top-senders-list">
+                <tr>
+                  <td colspan="3" class="log-empty">No sender data yet. Process some emails to see analytics.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section advanced-section">
+      <h2>Advanced Filtering Rules</h2>
+      <p class="section-description">Create custom rules to automatically process emails based on conditions</p>
+      
+      <div class="setting-item">
+        <button id="btn-add-rule" class="btn btn-primary">Add New Rule</button>
+      </div>
+      
+      <div id="rules-list" class="rules-list">
+        <p class="log-empty">No rules defined yet. Click "Add New Rule" to create one.</p>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>Privacy & Legal</h2>
+      <p class="section-description" style="margin-top: 20px; margin-bottom: 15px;">Learn how we handle your data (spoiler: everything stays on your device!)</p>
+      <div class="setting-item" style="text-align: center;">
+        <a href="../privacy/privacy.html" target="_blank" class="btn btn-secondary">View Privacy Policy</a>
+      </div>
+    </div>
+
     <div class="status-message" id="status-message"></div>
+  </div>
+
+  <!-- Rule Editor Modal -->
+  <div id="rule-editor-modal" class="rule-editor-modal">
+    <div class="rule-editor-content">
+      <div class="rule-editor-header">
+        <h3 id="rule-editor-title">New Rule</h3>
+        <button class="rule-editor-close" id="rule-editor-close">&times;</button>
+      </div>
+      
+      <div class="rule-editor-section">
+        <label>
+          <strong>Rule Name:</strong>
+          <input type="text" id="rule-name-input" placeholder="e.g., Delete newsletters" style="width: 100%; margin-top: 5px;">
+        </label>
+      </div>
+      
+      <div class="rule-editor-section">
+        <h4>Conditions (ALL must match)</h4>
+        <div id="rule-conditions-container">
+          <!-- Conditions will be added here -->
+        </div>
+        <button id="btn-add-condition" class="btn btn-small btn-secondary" style="margin-top: 10px;">+ Add Condition</button>
+      </div>
+      
+      <div class="rule-editor-section">
+        <h4>Actions (when conditions match)</h4>
+        <div class="rule-actions-section">
+          <div class="rule-action-item">
+            <input type="checkbox" id="rule-action-unsubscribe">
+            <label for="rule-action-unsubscribe">Unsubscribe</label>
+          </div>
+          <div class="rule-action-item">
+            <input type="checkbox" id="rule-action-delete">
+            <label for="rule-action-delete">Delete</label>
+          </div>
+          <div class="rule-action-item">
+            <input type="checkbox" id="rule-action-archive">
+            <label for="rule-action-archive">Archive</label>
+          </div>
+          <div class="rule-action-item">
+            <input type="checkbox" id="rule-action-mark-read">
+            <label for="rule-action-mark-read">Mark as Read</label>
+          </div>
+          <div class="rule-action-item">
+            <input type="checkbox" id="rule-action-star">
+            <label for="rule-action-star">Star</label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="rule-editor-section">
+        <label>
+          <strong>Priority:</strong>
+          <input type="number" id="rule-priority-input" value="0" min="0" max="100" style="width: 100px; margin-left: 10px;">
+          <span style="font-size: 12px; color: #5f6368; margin-left: 10px;">(Higher = evaluated first)</span>
+        </label>
+      </div>
+      
+      <div class="rule-editor-footer">
+        <button id="btn-cancel-rule" class="btn btn-secondary btn-small">Cancel</button>
+        <button id="btn-save-rule" class="btn btn-primary btn-small">Save Rule</button>
+      </div>
+    </div>
   </div>
 
   <script src="options.js"></script>

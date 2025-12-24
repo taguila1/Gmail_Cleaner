@@ -44,6 +44,11 @@ header h1 {
   border-radius: 6px;
 }
 
+.settings-section.advanced-section {
+  /* Advanced sections are hidden by default, shown when advanced user toggle is on */
+  display: none;
+}
+
 .settings-section h2 {
   font-size: 18px;
   color: #202124;
@@ -351,5 +356,256 @@ header h1 {
 
 .log-item.unsubscribed {
   border-left-color: #34a853;
+}
+
+/* Analytics Table */
+.analytics-table-container {
+  overflow-x: auto;
+  margin-top: 15px;
+}
+
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.analytics-table thead {
+  background: #f8f9fa;
+}
+
+.analytics-table th {
+  padding: 12px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #202124;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.analytics-table td {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #202124;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.analytics-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.analytics-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.analytics-table td.log-empty {
+  text-align: center;
+  color: #9aa0a6;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* Rules */
+.rules-list {
+  margin-top: 15px;
+}
+
+.rule-item {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.rule-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.rule-item-header label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex: 1;
+}
+
+.rule-item-header .rule-name {
+  margin-left: 8px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.rule-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.rule-item-details {
+  font-size: 12px;
+  color: #5f6368;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.rule-item-details div {
+  margin-bottom: 5px;
+}
+
+.rule-item-details strong {
+  color: #202124;
+}
+
+/* Rule Editor Modal */
+.rule-editor-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.rule-editor-modal.active {
+  display: flex;
+}
+
+.rule-editor-content {
+  background: white;
+  border-radius: 8px;
+  padding: 25px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.rule-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.rule-editor-header h3 {
+  margin: 0;
+  color: #202124;
+}
+
+.rule-editor-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #5f6368;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rule-editor-close:hover {
+  color: #202124;
+}
+
+.rule-editor-section {
+  margin-bottom: 20px;
+}
+
+.rule-editor-section h4 {
+  font-size: 14px;
+  color: #202124;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.rule-condition {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.rule-condition select,
+.rule-condition input {
+  padding: 6px 10px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.rule-condition-field {
+  flex: 2;
+}
+
+.rule-condition-operator {
+  flex: 2;
+}
+
+.rule-condition-value {
+  flex: 3;
+}
+
+.rule-condition-remove {
+  padding: 6px 12px;
+  background: #ea4335;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.rule-condition-remove:hover {
+  background: #c5221f;
+}
+
+.rule-actions-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.rule-action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rule-action-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.rule-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.btn-small {
+  padding: 8px 16px;
+  font-size: 13px;
 }
 

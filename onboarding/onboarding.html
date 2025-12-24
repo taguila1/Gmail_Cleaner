@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Gmail Cleaner</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+      text-align: center;
+    }
+    
+    .logo {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .logo img {
+      width: 128px;
+      height: 128px;
+      border-radius: 16px;
+    }
+    
+    h1 {
+      color: #1a73e8;
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: #5f6368;
+      font-size: 16px;
+      margin-bottom: 30px;
+    }
+    
+    .feature-list {
+      text-align: left;
+      margin: 30px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    
+    .feature-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: #202124;
+    }
+    
+    .feature-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .feature-icon {
+      margin-right: 12px;
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      color: #34a853;
+    }
+    
+    .feature-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+    
+    .pin-icon {
+      font-size: 24px;
+      margin-right: 8px;
+      color: #1a73e8;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+    }
+    
+    .instruction-icon {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      font-feature-settings: 'liga';
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+      vertical-align: middle;
+      margin: 0 4px;
+      color: #5f6368;
+    }
+    
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      font-feature-settings: 'liga';
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    .pin-instruction {
+      background: #e8f0fe;
+      border: 2px solid #1a73e8;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 30px 0;
+      text-align: left;
+    }
+    
+    .pin-instruction h3 {
+      color: #1a73e8;
+      font-size: 18px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .pin-instruction ol {
+      margin-left: 20px;
+      color: #202124;
+      line-height: 1.8;
+    }
+    
+    .pin-instruction li {
+      margin-bottom: 8px;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 10px;
+      display: inline-block;
+      text-decoration: none;
+    }
+    
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1557b0;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .btn-secondary {
+      background: #f1f3f4;
+      color: #202124;
+    }
+    
+    .btn-secondary:hover {
+      background: #e8eaed;
+    }
+    
+    .footer {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #5f6368;
+    }
+    
+    .footer a {
+      color: #1a73e8;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img id="logo-img" src="" alt="Gmail Cleaner Logo">
+    </div>
+    <h1>Welcome to Gmail Cleaner!</h1>
+    <p class="subtitle">Your inbox is about to get a lot cleaner</p>
+    
+    <div class="feature-list">
+      <div class="feature-item">
+        <span class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+        <span><strong>Auto-Unsubscribe:</strong> Automatically find and unsubscribe from unwanted emails</span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+        <span><strong>Smart Classification:</strong> Intelligently identify and remove junk mail</span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+        <span><strong>Safe & Secure:</strong> Preview mode ensures you're always in control</span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+        <span><strong>Whitelist Protection:</strong> Never accidentally delete important emails</span>
+      </div>
+    </div>
+    
+    <div class="pin-instruction">
+      <h3>
+        <span class="pin-icon material-symbols-outlined">map_pin_heart</span>
+        Pin This Extension
+      </h3>
+      <p style="margin-bottom: 10px; color: #5f6368;">To get the most out of Gmail Cleaner, pin it to your toolbar:</p>
+      <ol>
+        <li>Click the <strong>puzzle piece icon</strong> <span class="instruction-icon material-symbols-outlined">extension</span> in your Chrome toolbar</li>
+        <li>Find <strong>"Gmail Cleaner"</strong> in the list</li>
+        <li>Click the <strong>pin icon</strong> next to it</li>
+      </ol>
+    </div>
+    
+    <div>
+      <button id="btn-get-started" class="btn btn-primary">Get Started</button>
+      <button id="btn-skip" class="btn btn-secondary">Skip for Now</button>
+    </div>
+    
+    <div class="footer">
+      <p>Need help? <a href="#" id="link-settings">Open Settings</a> or check the <a href="https://github.com/taguila1/Gmail_Cleaner" target="_blank">documentation</a></p>
+    </div>
+  </div>
+  
+  <script src="onboarding.js"></script>
+</body>
+</html>
+

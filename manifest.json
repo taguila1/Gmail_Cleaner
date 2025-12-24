@@ -6,10 +6,22 @@
   "permissions": [
     "storage",
     "tabs",
-    "activeTab"
+    "activeTab",
+    "alarms",
+    "scripting"
   ],
   "host_permissions": [
     "https://mail.google.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "onboarding/onboarding.html",
+        "privacy/privacy.html",
+        "assets/icons/icon128.png"
+      ],
+      "matches": ["<all_urls>"]
+    }
   ],
   "background": {
     "service_worker": "background/service-worker.js"
@@ -36,6 +48,29 @@
     "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
+  },
+  "commands": {
+    "unsubscribe-current": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U",
+        "mac": "Command+Shift+U"
+      },
+      "description": "Unsubscribe from current email"
+    },
+    "process-emails": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+P",
+        "mac": "Command+Shift+P"
+      },
+      "description": "Process emails (preview mode)"
+    },
+    "open-settings": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Comma",
+        "mac": "Command+Shift+Comma"
+      },
+      "description": "Open Gmail Cleaner settings"
+    }
   }
 }
 

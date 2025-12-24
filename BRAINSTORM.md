@@ -1,5 +1,20 @@
 # Gmail Cleaner Chrome Extension - Brainstorming & Architecture
 
+## 📊 Project Status
+
+**Phase 1 (MVP):** ✅ **COMPLETED**  
+**Phase 2 (Enhanced Features):** ✅ **COMPLETED**  
+**Phase 3 (Advanced Features):** ⏳ **PENDING**
+
+### Key Achievements
+- ✅ Hybrid unsubscribe detection (DOM + Gmail native button)
+- ✅ Smart email classification with heuristic scoring
+- ✅ Bulk email processing with preview mode
+- ✅ Whitelist/blacklist with domain matching support
+- ✅ Activity logging and statistics dashboard
+- ✅ Enhanced preview mode with detailed results table
+- ✅ Delete unread functionality
+
 ## Core Requirements
 
 ### 1. Auto-Unsubscribe Feature
@@ -17,13 +32,13 @@
 
 **Recommended**: Option C (Hybrid) - Most comprehensive coverage
 
-**Implementation Strategy**:
-1. Content Script to inject into Gmail pages
-2. Background Service Worker for coordination
-3. Parse email headers via Gmail API or DOM inspection
-4. Pattern matching for unsubscribe links (regex + heuristics)
-5. Queue system for batch processing
-6. Rate limiting to avoid triggering spam detection
+**Implementation Strategy**: ✅ **IMPLEMENTED**
+1. ✅ Content Script to inject into Gmail pages - *Implemented in `content/content-script.js`*
+2. ✅ Background Service Worker for coordination - *Implemented in `background/service-worker.js`*
+3. ✅ Parse email headers via Gmail API or DOM inspection - *Implemented with DOM-based detection*
+4. ✅ Pattern matching for unsubscribe links (regex + heuristics) - *Enhanced with 15+ patterns*
+5. ✅ Queue system for batch processing - *Implemented with iterative processing*
+6. ✅ Rate limiting to avoid triggering spam detection - *Configurable delay (default: 1000ms)*
 
 ### 2. Smart Email Classification
 **Challenge**: Distinguishing junk from legitimate emails without false positives
@@ -36,31 +51,31 @@
 
 **Recommended**: Option C + Option A (User rules + heuristics)
 
-**Implementation Strategy**:
-1. Whitelist system (never delete from these senders/domains)
-2. Blacklist system (always safe to delete)
-3. Heuristic scoring:
-   - Sender reputation (known domains)
-   - Email age
-   - Engagement history (opened, replied, starred)
-   - Subject line patterns
-   - Attachment presence
-4. Confidence threshold before deletion
-5. Preview mode before actual deletion
+**Implementation Strategy**: ✅ **IMPLEMENTED**
+1. ✅ Whitelist system (never delete from these senders/domains) - *Supports exact emails, domains (`@domain.com`), and wildcards (`*@domain.com`)*
+2. ✅ Blacklist system (always safe to delete) - *Same domain matching support as whitelist*
+3. ✅ Heuristic scoring - *Implemented `calculateJunkScore()` with:*
+   - ✅ Sender reputation (known domains) - *Marketing domains, noreply patterns*
+   - ✅ Email age - *Older emails (>30 days) get higher junk score*
+   - ✅ Engagement history (opened, replied, starred) - *Starred, important, attachments reduce score*
+   - ✅ Subject line patterns - *Junk patterns and marketing keywords*
+   - ✅ Attachment presence - *Attachments reduce junk score*
+4. ✅ Confidence threshold before deletion - *Configurable (default: 0.7)*
+5. ✅ Preview mode before actual deletion - *Full preview with detailed results table*
 
 ### 3. Additional Feature Ideas
 
 #### A. Bulk Operations
-- Batch unsubscribe from multiple emails
-- Bulk delete with preview
-- Archive instead of delete (safer option)
-- Mark as read/unread
+- ✅ Batch unsubscribe from multiple emails - *Implemented*
+- ✅ Bulk delete with preview - *Implemented*
+- ⏳ Archive instead of delete (safer option) - *Not yet implemented*
+- ⏳ Mark as read/unread - *Not yet implemented*
 
 #### B. Email Analytics
-- Statistics dashboard (emails processed, unsubscribed, deleted)
-- Sender frequency analysis
-- Email volume trends
-- Time saved estimate
+- ✅ Statistics dashboard (emails processed, unsubscribed, deleted) - *Implemented in options page*
+- ⏳ Sender frequency analysis - *Not yet implemented*
+- ⏳ Email volume trends - *Not yet implemented*
+- ⏳ Time saved estimate - *Not yet implemented*
 
 #### C. Smart Filters
 - Auto-categorize by sender domain
@@ -69,11 +84,11 @@
 - Find duplicate emails
 
 #### D. Safety Features
-- Undo functionality (Gmail's native undo + extension backup)
-- Dry-run mode (preview without changes)
-- Confirmation dialogs for bulk operations
-- Activity log/audit trail
-- Backup before deletion (optional)
+- ⏳ Undo functionality (Gmail's native undo + extension backup) - *Not yet implemented*
+- ✅ Dry-run mode (preview without changes) - *Implemented as Preview Mode*
+- ✅ Confirmation dialogs for bulk operations - *Implemented*
+- ✅ Activity log/audit trail - *Implemented with three log types: Auto-Unsubscribed, Auto-Deleted, Failed Unsubscribe Attempts*
+- ⏳ Backup before deletion (optional) - *Not yet implemented*
 
 #### E. Automation
 - Scheduled cleanup (daily/weekly)
@@ -82,11 +97,11 @@
 - Smart archiving rules
 
 #### F. User Experience
-- Progress indicators for bulk operations
-- Pause/resume functionality
-- Customizable keyboard shortcuts
-- Quick actions toolbar
-- Notification system
+- ✅ Progress indicators for bulk operations - *Implemented with status messages and results table*
+- ⏳ Pause/resume functionality - *Not yet implemented*
+- ⏳ Customizable keyboard shortcuts - *Not yet implemented*
+- ✅ Quick actions toolbar - *Implemented in popup (Unsubscribe, Process Emails, Delete Unread)*
+- ⏳ Notification system - *Not yet implemented*
 
 #### G. Advanced Features
 - Email content analysis (NLP for sentiment/importance)
@@ -158,17 +173,37 @@ GmailCleaner/
 
 ## Implementation Phases
 
-### Phase 1: MVP (Minimum Viable Product)
-1. Basic unsubscribe detection (List-Unsubscribe headers)
-2. Simple whitelist/blacklist
-3. Manual trigger (button in popup)
-4. Basic safety checks
+### Phase 1: MVP (Minimum Viable Product) ✅ **COMPLETED**
+1. ✅ Basic unsubscribe detection (List-Unsubscribe headers) - *Implemented with hybrid approach*
+2. ✅ Simple whitelist/blacklist - *Implemented with domain matching support (`@domain.com`, `domain.com`, `*@domain.com`)*
+3. ✅ Manual trigger (button in popup) - *Implemented with "Unsubscribe From Current Email" and "Process Emails" buttons*
+4. ✅ Basic safety checks - *Implemented: preview mode, confirmation dialogs, rate limiting, whitelist protection*
 
-### Phase 2: Enhanced Features
-1. DOM-based unsubscribe detection
-2. Heuristic classification
-3. Bulk operations
-4. Preview mode
+### Phase 2: Enhanced Features ✅ **COMPLETED**
+1. ✅ DOM-based unsubscribe detection - *Enhanced implementation with:*
+   - Multiple pattern matching (unsubscribe, opt-out, manage preferences, etc.)
+   - Gmail native unsubscribe button detection
+   - Mailto unsubscribe link detection
+   - URL pattern matching
+   - Confidence scoring (high/medium/low)
+2. ✅ Heuristic classification - *Implemented `calculateJunkScore()` with:*
+   - Sender domain analysis (marketing domains, noreply patterns)
+   - Subject line pattern matching
+   - Email age consideration
+   - Engagement indicators (starred, important, attachments, labels)
+   - Confidence threshold system
+3. ✅ Bulk operations - *Implemented `handleProcessEmails()` with:*
+   - Batch processing of up to 50 emails
+   - Iterative email opening and processing
+   - Auto-unsubscribe and auto-delete options
+   - Rate limiting between actions
+   - Detailed per-email results tracking
+4. ✅ Preview mode - *Fully implemented with:*
+   - Preview-only mode (no actual changes)
+   - Detailed results table showing per-email outcomes
+   - Status indicators (will unsubscribe, won't unsubscribe, will delete, won't delete, protected, etc.)
+   - Whitelist/blacklist quick actions from preview table
+   - Comprehensive email data extraction
 
 ### Phase 3: Advanced Features
 1. Scheduled automation
@@ -194,10 +229,21 @@ GmailCleaner/
 
 ## Next Steps
 
-1. Set up basic extension structure
-2. Implement Gmail DOM detection
-3. Build unsubscribe detection (start with headers)
-4. Create simple UI for manual triggering
-5. Add whitelist/blacklist functionality
-6. Test with real Gmail account (carefully!)
+### Completed ✅
+1. ✅ Set up basic extension structure
+2. ✅ Implement Gmail DOM detection
+3. ✅ Build unsubscribe detection (hybrid: headers + DOM scanning)
+4. ✅ Create simple UI for manual triggering
+5. ✅ Add whitelist/blacklist functionality (with domain matching)
+6. ✅ Test with real Gmail account
+
+### Phase 3: Advanced Features (Next)
+1. ⏳ Scheduled automation (daily/weekly cleanup)
+2. ⏳ Enhanced analytics dashboard (sender frequency, trends, time saved)
+3. ⏳ Advanced filtering rules (custom rules engine)
+4. ⏳ Archive instead of delete option
+5. ⏳ Mark as read/unread functionality
+6. ⏳ Pause/resume for bulk operations
+7. ⏳ Export/import settings
+8. ⏳ ML-based classification (optional, future enhancement)
 

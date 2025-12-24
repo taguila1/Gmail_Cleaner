@@ -177,6 +177,31 @@ async function handleProcessEmails() {
               }
             }
             
+            // Show processing controls
+            document.getElementById('processing-controls').style.display = 'block';
+            const btnPause = document.getElementById('btn-pause-processing');
+            const btnResume = document.getElementById('btn-resume-processing');
+            const btnStop = document.getElementById('btn-stop-processing');
+            
+            // Setup pause/resume/stop handlers
+            btnPause.onclick = () => {
+              chrome.tabs.sendMessage(tab.id, { action: 'pauseProcessing' });
+              btnPause.style.display = 'none';
+              btnResume.style.display = 'inline-block';
+            };
+            
+            btnResume.onclick = () => {
+              chrome.tabs.sendMessage(tab.id, { action: 'resumeProcessing' });
+              btnResume.style.display = 'none';
+              btnPause.style.display = 'inline-block';
+            };
+            
+            btnStop.onclick = () => {
+              chrome.tabs.sendMessage(tab.id, { action: 'stopProcessing' });
+              document.getElementById('processing-controls').style.display = 'none';
+              btnProcessEmails.disabled = false;
+            };
+            
             chrome.tabs.sendMessage(tab.id, {
               action: 'processEmails',
               options: {
@@ -186,6 +211,8 @@ async function handleProcessEmails() {
                 autoDelete: autoDelete
               }
             }, async (response) => {
+              // Hide processing controls
+              document.getElementById('processing-controls').style.display = 'none';
               btnProcessEmails.disabled = false;
               
               if (chrome.runtime.lastError) {
@@ -195,9 +222,10 @@ async function handleProcessEmails() {
               
               if (response?.success) {
                 const { results } = response;
+                const stoppedText = results.stopped ? ' (stopped)' : '';
                 const previewText = previewOnly 
-                  ? `Preview: ${results.processed} processed, ${results.unsubscribed} would unsubscribe, ${results.deleted} would delete`
-                  : `Done: ${results.processed} processed, ${results.unsubscribed} unsubscribed, ${results.deleted} deleted`;
+                  ? `Preview: ${results.processed} processed, ${results.unsubscribed} would unsubscribe, ${results.deleted} would delete${stoppedText}`
+                  : `Done: ${results.processed} processed, ${results.unsubscribed} unsubscribed, ${results.deleted} deleted${stoppedText}`;
                 showStatus(previewText, previewOnly ? 'info' : 'success');
                 displayResults(results.emailDetails || []);
                 await loadStats();
@@ -524,10 +552,10 @@ function getDeleteBadge(status, reason, confidence) {
   const badge = badges[status] || badges['will_not_delete'];
   const confidenceText = confidence > 0 ? ` (${(confidence * 100).toFixed(0)}%)` : '';
   return `
-    <span class="status-badge ${badge.class}" title="${escapeHtml(reason)}${confidenceText}">
+    <span class="status-badge ${badge.class}" title="${escapeHtml(reason || '')}${confidenceText}">
       ${badge.icon} ${badge.text}
     </span>
-    <span class="status-reason">${escapeHtml(reason)}${confidenceText}</span>
+    ${reason ? `<span class="status-reason">${escapeHtml(reason)}${confidenceText}</span>` : ''}
   `;
 }
 

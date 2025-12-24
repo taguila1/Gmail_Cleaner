@@ -70,6 +70,21 @@
         Process Emails
       </button>
       
+      <div id="processing-controls" style="display: none; margin-top: 10px;">
+        <button id="btn-pause-processing" class="btn btn-warning" style="margin-right: 5px;">
+          <span class="btn-icon">⏸️</span>
+          Pause
+        </button>
+        <button id="btn-resume-processing" class="btn btn-success" style="margin-right: 5px; display: none;">
+          <span class="btn-icon">▶️</span>
+          Resume
+        </button>
+        <button id="btn-stop-processing" class="btn btn-danger">
+          <span class="btn-icon">⏹️</span>
+          Stop
+        </button>
+      </div>
+      
       <button id="btn-delete-unread" class="btn btn-danger">
         <span class="btn-icon">📬</span>
         Delete Unread Emails
@@ -95,6 +110,12 @@
 
     <div class="settings-section">
       <a href="#" id="link-settings" class="settings-link">⚙️ Settings</a>
+      <div style="margin-top: 10px; font-size: 11px; color: #5f6368;">
+        <strong>Keyboard Shortcuts:</strong><br>
+        <span>Ctrl+Shift+U</span> - Unsubscribe<br>
+        <span>Ctrl+Shift+P</span> - Process Emails<br>
+        <span>Ctrl+Shift+,</span> - Settings
+      </div>
     </div>
 
     <div class="status-message" id="status-message"></div>
