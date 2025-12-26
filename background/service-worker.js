@@ -29,6 +29,7 @@ chrome.runtime.onInstalled.addListener((details) => {
         rateLimitDelay: 1000, // ms between actions
         minConfidenceForDelete: 0.7,
         useArchiveInsteadOfDelete: false,
+        groupUnsubscribeTabs: true,
         scheduledCleanup: {
           enabled: false,
           frequency: 'daily', // 'daily' or 'weekly'
@@ -152,6 +153,11 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+// Tab grouping state
+let unsubscribeOperationActive = false;
+let unsubscribeTabs = new Set();
+const GROUP_NAME = 'Further Unsubscribe Action Required';
+
 // Listen for messages from content script or popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getSettings') {
@@ -159,6 +165,60 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse(result);
     });
     return true; // Will respond asynchronously
+  }
+  
+  // Track unsubscribe operation start
+  if (request.action === 'unsubscribeOperationStart') {
+    unsubscribeOperationActive = true;
+    unsubscribeTabs.clear();
+    if (sender.tab) {
+      unsubscribeTabs.add(sender.tab.id);
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  // Track unsubscribe operation end
+  if (request.action === 'unsubscribeOperationEnd') {
+    unsubscribeOperationActive = false;
+    // Group all tracked tabs
+    groupUnsubscribeTabs().then(() => {
+      unsubscribeTabs.clear();
+    });
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  // Track tab opened during unsubscribe
+  if (request.action === 'unsubscribeTabOpened' && unsubscribeOperationActive) {
+    if (sender.tab) {
+      unsubscribeTabs.add(sender.tab.id);
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  // Open unsubscribe tab without focusing
+  if (request.action === 'openUnsubscribeTab') {
+    chrome.tabs.create({
+      url: request.url,
+      active: false // Open in background (no focus)
+    }, (tab) => {
+      if (tab && unsubscribeOperationActive) {
+        unsubscribeTabs.add(tab.id);
+        // Group the tab
+        chrome.storage.sync.get(['settings'], (result) => {
+          const settings = result.settings || {};
+          if (settings.groupUnsubscribeTabs !== false) {
+            setTimeout(() => {
+              groupUnsubscribeTabs();
+            }, 500);
+          }
+        });
+      }
+      sendResponse({ success: true, tabId: tab?.id });
+    });
+    return true;
   }
   
   if (request.action === 'saveSettings') {
@@ -330,4 +390,108 @@ chrome.commands.onCommand.addListener((command) => {
     chrome.runtime.openOptionsPage();
   }
 });
+
+/**
+ * Track new tabs created during unsubscribe operations
+ */
+chrome.tabs.onCreated.addListener((tab) => {
+  if (unsubscribeOperationActive && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+    unsubscribeTabs.add(tab.id);
+    // Group immediately if setting is enabled (with a small delay to ensure tab is fully created)
+    chrome.storage.sync.get(['settings'], (result) => {
+      const settings = result.settings || {};
+      if (settings.groupUnsubscribeTabs !== false) {
+        setTimeout(() => {
+          groupUnsubscribeTabs();
+        }, 500);
+      }
+    });
+  }
+});
+
+/**
+ * Group tabs opened during unsubscribe operations
+ */
+async function groupUnsubscribeTabs() {
+  try {
+    // Check if feature is enabled
+    const result = await new Promise((resolve) => {
+      chrome.storage.sync.get(['settings'], resolve);
+    });
+    const settings = result.settings || {};
+    if (settings.groupUnsubscribeTabs === false) {
+      return;
+    }
+    
+    if (unsubscribeTabs.size === 0) {
+      return;
+    }
+    
+    const tabIds = Array.from(unsubscribeTabs).filter(id => id !== undefined && id !== null);
+    if (tabIds.length === 0) {
+      return;
+    }
+    
+    // Check if tabs still exist
+    const existingTabs = await new Promise((resolve) => {
+      chrome.tabs.query({}, (tabs) => {
+        resolve(tabs.map(t => t.id));
+      });
+    });
+    
+    const validTabIds = tabIds.filter(id => existingTabs.includes(id));
+    if (validTabIds.length === 0) {
+      return;
+    }
+    
+    // Find existing group with the same name
+    const groups = await new Promise((resolve) => {
+      chrome.tabGroups.query({ title: GROUP_NAME }, resolve);
+    });
+    
+    let groupId;
+    if (groups.length > 0) {
+      // Use existing group
+      groupId = groups[0].id;
+      // Get current tabs in the group
+      const currentTabs = await new Promise((resolve) => {
+        chrome.tabs.query({ groupId: groupId }, (tabs) => {
+          resolve(tabs.map(t => t.id));
+        });
+      });
+      // Add new tabs to existing group
+      const tabsToAdd = validTabIds.filter(id => !currentTabs.includes(id));
+      if (tabsToAdd.length > 0) {
+        chrome.tabs.group({ groupId: groupId, tabIds: tabsToAdd }, (newGroupId) => {
+          if (chrome.runtime.lastError) {
+            console.error('Error adding tabs to existing group:', chrome.runtime.lastError);
+          } else {
+            console.log(`Added ${tabsToAdd.length} tabs to existing group "${GROUP_NAME}"`);
+          }
+        });
+      }
+    } else {
+      // Create new group
+      chrome.tabs.group({ tabIds: validTabIds }, (newGroupId) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error creating tab group:', chrome.runtime.lastError);
+        } else {
+          // Update group title and color
+          chrome.tabGroups.update(newGroupId, {
+            title: GROUP_NAME,
+            color: 'blue'
+          }, () => {
+            if (chrome.runtime.lastError) {
+              console.error('Error updating group:', chrome.runtime.lastError);
+            } else {
+              console.log(`Created new group "${GROUP_NAME}" with ${validTabIds.length} tabs`);
+            }
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error grouping unsubscribe tabs:', error);
+  }
+}
 

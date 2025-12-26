@@ -8,7 +8,8 @@
     "tabs",
     "activeTab",
     "alarms",
-    "scripting"
+    "scripting",
+    "tabGroups"
   ],
   "host_permissions": [
     "https://mail.google.com/*"

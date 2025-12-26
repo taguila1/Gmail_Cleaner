@@ -10,11 +10,21 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      cursor: default;
+      caret-color: transparent;
+    }
+    
+    input, textarea, select, button, div, h1, h2, h3, h4, h5, h6, p, span, a, li, ul, ol, table, td, th, tr, thead, tbody, tfoot, section, article, header, footer, nav, aside, main {
+      caret-color: transparent;
+    }
+    
+    a, button, .btn {
+      cursor: pointer;
     }
     
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #e0e5ec;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -23,9 +33,11 @@
     }
     
     .container {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      background: #e0e5ec;
+      border-radius: 24px;
+      box-shadow: 
+        20px 20px 40px #b8bec5,
+        -20px -20px 40px #ffffff;
       max-width: 600px;
       width: 100%;
       padding: 40px;
@@ -60,9 +72,12 @@
     .feature-list {
       text-align: left;
       margin: 30px 0;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 8px;
+      padding: 24px;
+      background: #e0e5ec;
+      border-radius: 20px;
+      box-shadow: 
+        inset 3px 3px 6px #b8bec5,
+        inset -3px -3px 6px #ffffff;
     }
     
     .feature-item {
@@ -137,12 +152,15 @@
     }
     
     .pin-instruction {
-      background: #e8f0fe;
-      border: 2px solid #1a73e8;
-      border-radius: 8px;
-      padding: 20px;
+      background: #e0e5ec;
+      border: none;
+      border-radius: 20px;
+      padding: 24px;
       margin: 30px 0;
       text-align: left;
+      box-shadow: 
+        6px 6px 12px #b8bec5,
+        -6px -6px 12px #ffffff;
     }
     
     .pin-instruction h3 {
@@ -166,34 +184,56 @@
     .btn {
       padding: 12px 24px;
       border: none;
-      border-radius: 6px;
+      border-radius: 16px;
       font-size: 16px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
       margin: 10px;
       display: inline-block;
       text-decoration: none;
+      box-shadow: 
+        4px 4px 8px #b8bec5,
+        -4px -4px 8px #ffffff;
     }
     
     .btn-primary {
-      background: #1a73e8;
+      background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
       color: white;
+      box-shadow: 
+        4px 4px 8px rgba(26, 115, 232, 0.3),
+        -4px -4px 8px rgba(255, 255, 255, 0.1);
     }
     
     .btn-primary:hover {
-      background: #1557b0;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      box-shadow: 
+        2px 2px 4px rgba(26, 115, 232, 0.4),
+        -2px -2px 4px rgba(255, 255, 255, 0.1);
+      transform: translateY(1px);
+    }
+    
+    .btn-primary:active {
+      box-shadow: 
+        inset 2px 2px 4px rgba(0, 0, 0, 0.2),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.1);
     }
     
     .btn-secondary {
-      background: #f1f3f4;
+      background: #e0e5ec;
       color: #202124;
     }
     
     .btn-secondary:hover {
-      background: #e8eaed;
+      box-shadow: 
+        2px 2px 4px #b8bec5,
+        -2px -2px 4px #ffffff;
+      transform: translateY(1px);
+    }
+    
+    .btn-secondary:active {
+      box-shadow: 
+        inset 2px 2px 4px #b8bec5,
+        inset -2px -2px 4px #ffffff;
     }
     
     .footer {

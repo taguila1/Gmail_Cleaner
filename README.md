@@ -17,12 +17,53 @@ A Chrome extension to help you automatically unsubscribe from emails and intelli
 - Confidence threshold: Only deletes emails above a certain confidence score
 - Preview mode: See what would be deleted before actually deleting
 
-### 3. Additional Features
+### 3. Bulk Email Processing
+- Process up to 50 emails at once
+- Preview mode: See what actions would be taken before executing
+- Real-time progress tracking with detailed results table
+- Pause/Resume/Stop controls during processing
+- Results persist even if popup is closed during processing
+- Sticky table headers for easy navigation
+
+### 4. Advanced Filtering & Rules
+- Custom filtering rules engine with conditions and actions
+- Rule priority system
+- Multiple condition types (contains, equals, starts with, etc.)
+- Actions: unsubscribe, delete, archive, mark as read, star
+- Advanced user mode for power users
+
+### 5. Activity Logging & Analytics
+- Auto-unsubscribed emails log
+- Auto-deleted emails log
+- Failed unsubscribe attempts log
+- Top senders analytics dashboard
+- Export functionality for logs
+- Quick actions: Double-click logs to add to whitelist/blacklist
+
+### 6. Smart Tab Management
+- Automatic tab grouping for unsubscribe actions
+- Groups new tabs into "Further Unsubscribe Action Required" group
+- Quiet background tab opening (no focus interruption)
+- Configurable via settings
+
+### 7. User Experience Features
+- Modern neumorphic design with Heroicons
+- Keyboard shortcuts (Ctrl+Shift+U, Ctrl+Shift+P, Ctrl+Shift+,)
+- Onboarding flow for first-time users
+- Inline editing for whitelist/blacklist items
+- Double-click preview items to quickly whitelist/blacklist
+- Sticky status messages
+- Persistent processing controls across popup closes
+- Real-time results updates via storage listeners
+
+### 8. Additional Features
 - Statistics tracking (unsubscribed, deleted, processed)
-- Bulk email processing
 - Rate limiting to avoid triggering Gmail's spam detection
-- Settings page for configuration
+- Settings page for comprehensive configuration
 - Safety features (preview mode, confirmation dialogs)
+- Scheduled automation (daily/weekly cleanup)
+- Export/Import settings functionality
+- Privacy policy page
 
 ## Installation
 
@@ -56,10 +97,18 @@ A Chrome extension to help you automatically unsubscribe from emails and intelli
 
 ### Whitelist/Blacklist
 
-- **Whitelist**: Emails from these senders will NEVER be deleted
+- **Whitelist**: Emails from these senders will NEVER be deleted or unsubscribed from
 - **Blacklist**: Emails from these senders will be considered for deletion
 
-You can add emails or domains (e.g., `example.com` will match all emails from that domain).
+You can add:
+- Full email addresses (e.g., `user@example.com`)
+- Domains (e.g., `example.com` or `@example.com`)
+- Wildcard patterns (e.g., `*@example.com`)
+
+**Features:**
+- Inline editing: Double-click any list item to edit it
+- Domain extraction: Automatically extracts domains from email addresses
+- Quick add: Double-click preview results or activity logs to add to lists
 
 ## Safety Features
 
@@ -92,7 +141,7 @@ GmailCleaner/
 ├── background/
 │   └── service-worker.js  # Background service worker
 ├── content/
-│   └── content-script.js  # Gmail DOM interaction
+│   └── content-script.js # Gmail DOM interaction
 ├── popup/
 │   ├── popup.html         # Popup UI
 │   ├── popup.js
@@ -101,6 +150,16 @@ GmailCleaner/
 │   ├── options.html       # Settings page
 │   ├── options.js
 │   └── options.css
+├── onboarding/
+│   ├── onboarding.html    # First-run onboarding
+│   ├── onboarding.js
+│   └── onboarding.css
+├── privacy/
+│   ├── privacy.html       # Privacy policy page
+│   ├── privacy.js
+│   └── privacy.css
+├── utils/
+│   └── classifier.js      # Email classification logic
 └── assets/
     └── icons/             # Extension icons
 ```
@@ -117,13 +176,29 @@ GmailCleaner/
 - Requires manual testing with your Gmail account
 - Some unsubscribe links may require manual interaction
 
+## Recent Updates
+
+### Version 1.0.0 Features
+- ✅ Complete neumorphic UI redesign with Heroicons
+- ✅ Advanced filtering rules engine
+- ✅ Activity logging and analytics dashboard
+- ✅ Tab grouping for unsubscribe actions
+- ✅ Persistent processing results (survives popup closes)
+- ✅ Real-time results updates
+- ✅ Inline editing for whitelist/blacklist
+- ✅ Double-click quick actions
+- ✅ Keyboard shortcuts
+- ✅ Onboarding flow
+- ✅ Export/Import settings
+- ✅ Scheduled automation
+
 ## Future Enhancements
 
 - Machine learning-based email classification
-- Scheduled automatic cleanup
-- Email analytics dashboard
 - Multi-account support
 - Integration with Gmail API for better email access
+- Email content analysis (NLP)
+- Undo functionality with backup system
 
 ## License
 

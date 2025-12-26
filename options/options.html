@@ -68,6 +68,14 @@
         </label>
         <p class="setting-description">Show advanced features and settings</p>
       </div>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="group-unsubscribe-tabs">
+          <span>Group Unsubscribe Tabs</span>
+        </label>
+        <p class="setting-description">Automatically group tabs opened during unsubscribe actions</p>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -204,11 +212,11 @@
       <div class="log-section">
         <div class="log-header">
           <h3>Failed Unsubscribe Attempts</h3>
-          <p class="section-description">Emails that couldn't be unsubscribed from (for processor improvement)</p>
           <div class="log-actions">
             <button id="btn-clear-failed" class="btn btn-small btn-secondary">Clear</button>
             <button id="btn-export-failed" class="btn btn-small btn-secondary">Export</button>
           </div>
+          <p class="section-description">Emails that couldn't be unsubscribed from (for processor improvement)</p>
         </div>
         <div class="log-container" id="log-failed">
           <p class="log-empty">No failed unsubscribe attempts yet</p>
@@ -269,6 +277,23 @@
     </div>
 
     <div class="status-message" id="status-message"></div>
+  </div>
+
+  <!-- Log Item Action Modal -->
+  <div id="log-item-modal" class="log-item-modal">
+    <div class="log-item-modal-content">
+      <div class="log-item-modal-header">
+        <h3>Quick Actions</h3>
+        <button id="btn-close-log-modal" class="log-item-modal-close" type="button">&times;</button>
+      </div>
+      <div class="log-item-modal-body">
+        <p class="log-item-modal-email" id="log-modal-email"></p>
+        <div class="log-item-modal-actions">
+          <button id="btn-add-whitelist-from-log" class="btn btn-primary">Add to Whitelist</button>
+          <button id="btn-add-blacklist-from-log" class="btn btn-secondary">Add to Blacklist</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Rule Editor Modal -->

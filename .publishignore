@@ -1,0 +1,14 @@
+# Files to exclude when creating publish ZIP
+*.git*
+*.md
+!README.md
+GITHUB_SETUP.md
+CHROME_WEB_STORE_PUBLISHING.md
+STORE_LISTING_DESCRIPTION.md
+UX_IMPROVEMENTS.md
+LICENSE_OPTIONS.md
+.DS_Store
+*.log
+node_modules/
+*.zip
+.publishignore

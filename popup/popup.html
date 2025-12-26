@@ -2,20 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=700, initial-scale=1.0">
+  <meta name="viewport" content="width=525, initial-scale=1.0">
   <title>Gmail Cleaner</title>
   <link rel="stylesheet" href="popup.css">
   <style>
     html {
-      width: 700px;
-      min-width: 700px;
+      width: 525px;
+      min-width: 525px;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    body {
+      border-radius: 16px;
+      overflow: hidden;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Gmail Cleaner</h1>
+      <h1>
+        Gmail Cleaner
+        <button id="btn-shortcuts" class="header-icon-btn" type="button">
+          <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+        </button>
+      </h1>
+      
+      <!-- Keyboard Shortcuts Modal -->
+      <div id="shortcuts-modal" class="shortcuts-modal">
+        <div class="shortcuts-modal-content">
+          <div class="shortcuts-modal-header">
+            <h3>Keyboard Shortcuts</h3>
+            <button id="btn-close-shortcuts" class="shortcuts-close-btn" type="button">&times;</button>
+          </div>
+          <div class="shortcuts-list">
+            <div class="shortcut-item">
+              <span class="shortcut-key">Ctrl+Shift+U</span>
+              <span class="shortcut-desc">Unsubscribe from Current Email</span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-key">Ctrl+Shift+P</span>
+              <span class="shortcut-desc">Process Emails</span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-key">Ctrl+Shift+,</span>
+              <span class="shortcut-desc">Open Settings</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <p class="subtitle">Clean up your inbox intelligently</p>
     </header>
 
@@ -58,40 +95,54 @@
     </div>
 
     <div class="actions-section">
-      <h2>Quick Actions</h2>
-      
-      <button id="btn-unsubscribe" class="btn btn-primary">
-        <span class="btn-icon">📧</span>
-        Unsubscribe from Current Email
-      </button>
-      
-      <button id="btn-process-emails" class="btn btn-secondary">
-        <span class="btn-icon">🔄</span>
-        Process Emails
-      </button>
-      
-      <div id="processing-controls" style="display: none; margin-top: 10px;">
-        <button id="btn-pause-processing" class="btn btn-warning" style="margin-right: 5px;">
-          <span class="btn-icon">⏸️</span>
-          Pause
+      <div class="actions-grid">
+        <button id="btn-unsubscribe" class="btn btn-primary btn-compact">
+          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span>Unsubscribe</span>
         </button>
-        <button id="btn-resume-processing" class="btn btn-success" style="margin-right: 5px; display: none;">
-          <span class="btn-icon">▶️</span>
-          Resume
+        
+        <button id="btn-process-emails" class="btn btn-secondary btn-compact">
+          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          <span>Process</span>
         </button>
-        <button id="btn-stop-processing" class="btn btn-danger">
-          <span class="btn-icon">⏹️</span>
-          Stop
+        
+        <button id="btn-delete-unread" class="btn btn-danger btn-compact">
+          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+          </svg>
+          <span>Delete Unread</span>
         </button>
       </div>
       
-      <button id="btn-delete-unread" class="btn btn-danger">
-        <span class="btn-icon">📬</span>
-        Delete Unread Emails
-      </button>
+      <div id="processing-controls" class="processing-controls" style="display: none;">
+        <button id="btn-pause-processing" class="btn btn-warning btn-compact">
+          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
+          </svg>
+          <span>Pause</span>
+        </button>
+        <button id="btn-resume-processing" class="btn btn-success btn-compact" style="display: none;">
+          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
+          </svg>
+          <span>Resume</span>
+        </button>
+        <button id="btn-stop-processing" class="btn btn-danger btn-compact">
+          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" />
+          </svg>
+          <span>Stop</span>
+        </button>
+      </div>
       
       <button id="btn-process-delete" class="btn btn-danger" style="display: none;">
-        <span class="btn-icon">🗑️</span>
+        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+        </svg>
         Process & Delete (Confirm First!)
       </button>
     </div>
@@ -109,16 +160,33 @@
     </div>
 
     <div class="settings-section">
-      <a href="#" id="link-settings" class="settings-link">⚙️ Settings</a>
-      <div style="margin-top: 10px; font-size: 11px; color: #5f6368;">
-        <strong>Keyboard Shortcuts:</strong><br>
-        <span>Ctrl+Shift+U</span> - Unsubscribe<br>
-        <span>Ctrl+Shift+P</span> - Process Emails<br>
-        <span>Ctrl+Shift+,</span> - Settings
-      </div>
+      <a href="#" id="link-settings" class="settings-link">
+        <svg class="settings-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        Settings
+      </a>
     </div>
 
     <div class="status-message" id="status-message"></div>
+  </div>
+
+  <!-- Preview Item Modal -->
+  <div id="preview-item-modal" class="preview-item-modal">
+    <div class="preview-item-modal-content">
+      <div class="preview-item-modal-header">
+        <h3>Quick Actions</h3>
+        <button id="btn-close-preview-modal" class="preview-item-modal-close" type="button">&times;</button>
+      </div>
+      <div class="preview-item-modal-body">
+        <p class="preview-item-modal-email" id="preview-modal-email"></p>
+        <div class="preview-item-modal-actions">
+          <button id="btn-add-whitelist-from-preview" class="btn btn-primary">Add to Whitelist</button>
+          <button id="btn-add-blacklist-from-preview" class="btn btn-secondary">Add to Blacklist</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="popup.js"></script>

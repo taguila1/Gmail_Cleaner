@@ -9,6 +9,7 @@ const confidenceThreshold = document.getElementById('confidence-threshold');
 const confidenceValue = document.getElementById('confidence-value');
 const useArchive = document.getElementById('use-archive');
 const advancedUser = document.getElementById('advanced-user');
+const groupUnsubscribeTabs = document.getElementById('group-unsubscribe-tabs');
 const scheduledCleanupEnabled = document.getElementById('scheduled-cleanup-enabled');
 const scheduledCleanupOptions = document.getElementById('scheduled-cleanup-options');
 const cleanupFrequency = document.getElementById('cleanup-frequency');
@@ -55,6 +56,7 @@ function setupEventListeners() {
     toggleAdvancedSections();
     saveSettings();
   });
+  groupUnsubscribeTabs.addEventListener('change', saveSettings);
   
   // Scheduled cleanup
   scheduledCleanupEnabled.addEventListener('change', () => {
@@ -97,6 +99,18 @@ function setupEventListeners() {
   // Analytics
   document.getElementById('btn-refresh-analytics').addEventListener('click', loadAnalytics);
   document.getElementById('btn-clear-analytics').addEventListener('click', clearAnalytics);
+  
+  // Log item modal
+  document.getElementById('btn-close-log-modal').addEventListener('click', closeLogItemModal);
+  document.getElementById('btn-add-whitelist-from-log').addEventListener('click', addToWhitelistFromLog);
+  document.getElementById('btn-add-blacklist-from-log').addEventListener('click', addToBlacklistFromLog);
+  
+  // Close modal when clicking outside
+  document.getElementById('log-item-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'log-item-modal') {
+      closeLogItemModal();
+    }
+  });
   
   // Rules
   document.getElementById('btn-add-rule').addEventListener('click', addNewRule);
@@ -159,6 +173,7 @@ function loadSettings() {
     confidenceValue.textContent = settings.minConfidenceForDelete || 0.7;
     useArchive.checked = settings.useArchiveInsteadOfDelete === true;
     advancedUser.checked = settings.advancedUser === true;
+    groupUnsubscribeTabs.checked = settings.groupUnsubscribeTabs !== false;
     
     // Toggle advanced sections based on setting
     toggleAdvancedSections();
@@ -189,6 +204,7 @@ function saveSettings() {
     minConfidenceForDelete: parseFloat(confidenceThreshold.value) || 0.7,
     useArchiveInsteadOfDelete: useArchive.checked,
     advancedUser: advancedUser.checked,
+    groupUnsubscribeTabs: groupUnsubscribeTabs.checked,
     scheduledCleanup: {
       enabled: scheduledCleanupEnabled.checked,
       frequency: cleanupFrequency.value || 'daily',
@@ -279,14 +295,22 @@ function addWhitelistItem(value) {
   const li = document.createElement('li');
   li.className = 'list-item';
   li.innerHTML = `
-    <span>${escapeHtml(value)}</span>
+    <span class="list-item-text" data-value="${escapeHtml(value)}">${escapeHtml(value)}</span>
     <button class="btn-remove" data-value="${escapeHtml(value)}">Remove</button>
   `;
   
   // Attach event listener to the remove button
   const removeBtn = li.querySelector('.btn-remove');
+  const textSpan = li.querySelector('.list-item-text');
+  
   removeBtn.addEventListener('click', () => {
     removeFromWhitelist(value);
+  });
+  
+  // Double-click to edit
+  textSpan.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    editListItem(li, value, 'whitelist');
   });
   
   whitelistItems.appendChild(li);
@@ -296,14 +320,22 @@ function addBlacklistItem(value) {
   const li = document.createElement('li');
   li.className = 'list-item';
   li.innerHTML = `
-    <span>${escapeHtml(value)}</span>
+    <span class="list-item-text" data-value="${escapeHtml(value)}">${escapeHtml(value)}</span>
     <button class="btn-remove" data-value="${escapeHtml(value)}">Remove</button>
   `;
   
   // Attach event listener to the remove button
   const removeBtn = li.querySelector('.btn-remove');
+  const textSpan = li.querySelector('.list-item-text');
+  
   removeBtn.addEventListener('click', () => {
     removeFromBlacklist(value);
+  });
+  
+  // Double-click to edit
+  textSpan.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    editListItem(li, value, 'blacklist');
   });
   
   blacklistItems.appendChild(li);
@@ -331,6 +363,136 @@ function removeFromBlacklist(value) {
   });
 }
 
+/**
+ * Edit a list item (whitelist or blacklist)
+ */
+function editListItem(listItem, oldValue, listType) {
+  const textSpan = listItem.querySelector('.list-item-text');
+  const originalText = textSpan.textContent;
+  
+  // Create input field
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = originalText;
+  input.className = 'list-item-edit-input';
+  input.style.cssText = `
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 12px;
+    font-size: 13px;
+    background: #e0e5ec;
+    box-shadow: inset 2px 2px 4px #b8bec5, inset -2px -2px 4px #ffffff;
+    color: #202124;
+    margin-right: 8px;
+  `;
+  
+  // Replace span with input
+  textSpan.style.display = 'none';
+  listItem.insertBefore(input, textSpan);
+  input.focus();
+  input.select();
+  
+  // Save on Enter or blur
+  const saveEdit = () => {
+    const newValue = input.value.trim();
+    
+    if (newValue === originalText) {
+      // No change, just restore
+      input.remove();
+      textSpan.style.display = '';
+      return;
+    }
+    
+    if (!newValue) {
+      // Empty value, restore original
+      input.remove();
+      textSpan.style.display = '';
+      showStatus('Cannot save empty value', 'error');
+      return;
+    }
+    
+    // Update the list
+    const storageKey = listType === 'whitelist' ? 'whitelist' : 'blacklist';
+    const updateFunction = listType === 'whitelist' ? updateWhitelistItem : updateBlacklistItem;
+    
+    chrome.storage.sync.get([storageKey], (result) => {
+      const list = result[storageKey] || [];
+      
+      // Check if new value already exists
+      if (list.includes(newValue)) {
+        input.remove();
+        textSpan.style.display = '';
+        showStatus(`"${newValue}" already exists in ${listType}`, 'error');
+        return;
+      }
+      
+      // Update the value
+      const index = list.indexOf(oldValue);
+      if (index !== -1) {
+        list[index] = newValue;
+        chrome.storage.sync.set({ [storageKey]: list }, () => {
+          // Reload the list to update UI
+          if (listType === 'whitelist') {
+            loadWhitelist();
+          } else {
+            loadBlacklist();
+          }
+          showStatus(`Updated "${oldValue}" to "${newValue}" in ${listType}`, 'success');
+        });
+      }
+    });
+  };
+  
+  // Save on Enter
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      // Cancel edit
+      input.remove();
+      textSpan.style.display = '';
+    }
+  });
+  
+  // Save on blur
+  input.addEventListener('blur', saveEdit);
+}
+
+/**
+ * Update whitelist item (used internally)
+ */
+function updateWhitelistItem(oldValue, newValue) {
+  chrome.storage.sync.get(['whitelist'], (result) => {
+    const whitelist = result.whitelist || [];
+    const index = whitelist.indexOf(oldValue);
+    if (index !== -1) {
+      whitelist[index] = newValue;
+      chrome.storage.sync.set({ whitelist }, () => {
+        loadWhitelist();
+      });
+    }
+  });
+}
+
+/**
+ * Update blacklist item (used internally)
+ */
+function updateBlacklistItem(oldValue, newValue) {
+  chrome.storage.sync.get(['blacklist'], (result) => {
+    const blacklist = result.blacklist || [];
+    const index = blacklist.indexOf(oldValue);
+    if (index !== -1) {
+      blacklist[index] = newValue;
+      chrome.storage.sync.set({ blacklist }, () => {
+        loadBlacklist();
+      });
+    }
+  });
+}
+
 function loadStats() {
   chrome.storage.local.get(['stats'], (result) => {
     const stats = result.stats || { unsubscribed: 0, deleted: 0, processed: 0 };
@@ -352,10 +514,118 @@ function resetStats() {
 function showStatus(message, type = 'info') {
   statusMessage.textContent = message;
   statusMessage.className = `status-message ${type}`;
+  statusMessage.style.display = 'block';
   
+  // Keep success messages visible longer, auto-hide others
+  const timeout = type === 'success' ? 5000 : 3000;
   setTimeout(() => {
-    statusMessage.style.display = 'none';
-  }, 3000);
+    if (statusMessage.textContent === message) {
+      statusMessage.style.display = 'none';
+    }
+  }, timeout);
+}
+
+/**
+ * Extract domain from email address
+ */
+function extractDomain(email) {
+  if (!email || email === 'Unknown') return null;
+  
+  // If it's already a domain (no @), return as is
+  if (!email.includes('@')) {
+    return email.trim();
+  }
+  
+  // Extract domain from email
+  const match = email.match(/@([^\s]+)/);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  
+  return null;
+}
+
+/**
+ * Open modal for log item actions
+ */
+function openLogItemModal(email) {
+  const modal = document.getElementById('log-item-modal');
+  const emailDisplay = document.getElementById('log-modal-email');
+  const domain = extractDomain(email);
+  
+  if (!domain) {
+    showStatus('Could not extract domain from email', 'error');
+    return;
+  }
+  
+  emailDisplay.textContent = `Add "${domain}" to:`;
+  modal.classList.add('active');
+}
+
+/**
+ * Close log item modal
+ */
+function closeLogItemModal() {
+  const modal = document.getElementById('log-item-modal');
+  modal.classList.remove('active');
+}
+
+/**
+ * Add domain to whitelist from log modal
+ */
+function addToWhitelistFromLog() {
+  const emailDisplay = document.getElementById('log-modal-email');
+  const email = emailDisplay.textContent.match(/"([^"]+)"/)?.[1];
+  
+  if (!email) {
+    showStatus('Could not extract domain', 'error');
+    return;
+  }
+  
+  chrome.storage.sync.get(['whitelist'], (result) => {
+    const whitelist = result.whitelist || [];
+    if (whitelist.includes(email)) {
+      showStatus(`"${email}" is already in whitelist`, 'info');
+      closeLogItemModal();
+      return;
+    }
+    
+    whitelist.push(email);
+    chrome.storage.sync.set({ whitelist }, () => {
+      loadWhitelist();
+      showStatus(`Added "${email}" to whitelist`, 'success');
+      closeLogItemModal();
+    });
+  });
+}
+
+/**
+ * Add domain to blacklist from log modal
+ */
+function addToBlacklistFromLog() {
+  const emailDisplay = document.getElementById('log-modal-email');
+  const email = emailDisplay.textContent.match(/"([^"]+)"/)?.[1];
+  
+  if (!email) {
+    showStatus('Could not extract domain', 'error');
+    return;
+  }
+  
+  chrome.storage.sync.get(['blacklist'], (result) => {
+    const blacklist = result.blacklist || [];
+    if (blacklist.includes(email)) {
+      showStatus(`"${email}" is already in blacklist`, 'info');
+      closeLogItemModal();
+      return;
+    }
+    
+    blacklist.push(email);
+    chrome.storage.sync.set({ blacklist }, () => {
+      loadBlacklist();
+      showStatus(`Added "${email}" to blacklist`, 'success');
+      closeLogItemModal();
+    });
+  });
 }
 
 function escapeHtml(text) {
@@ -393,12 +663,14 @@ function displayLog(type, logEntries) {
   // Sort by date (newest first)
   const sorted = [...logEntries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   
-  container.innerHTML = sorted.map(entry => {
+  container.innerHTML = sorted.map((entry, index) => {
     const date = new Date(entry.timestamp).toLocaleString();
+    const email = entry.senderEmail || entry.sender || 'Unknown';
+    const emailData = escapeHtml(email);
     return `
-      <div class="log-item ${type}">
+      <div class="log-item ${type}" data-email="${emailData}" data-index="${index}" data-type="${type}">
         <div class="log-item-header">
-          <span class="log-item-email">${escapeHtml(entry.senderEmail || entry.sender || 'Unknown')}</span>
+          <span class="log-item-email">${emailData}</span>
           <span class="log-item-date">${date}</span>
         </div>
         ${entry.subject ? `<div class="log-item-subject">${escapeHtml(entry.subject)}</div>` : ''}
@@ -406,6 +678,17 @@ function displayLog(type, logEntries) {
       </div>
     `;
   }).join('');
+  
+  // Add double-click event listeners to log items
+  container.querySelectorAll('.log-item').forEach(item => {
+    item.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const email = item.getAttribute('data-email');
+      if (email && email !== 'Unknown') {
+        openLogItemModal(email);
+      }
+    });
+  });
 }
 
 function clearLog(type) {

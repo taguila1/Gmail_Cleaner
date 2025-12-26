@@ -13,6 +13,9 @@ const currentEmailSection = document.getElementById('current-email-section');
 const resultsSection = document.getElementById('results-section');
 const resultsTbody = document.getElementById('results-tbody');
 const btnClearResults = document.getElementById('btn-clear-results');
+const btnShortcuts = document.getElementById('btn-shortcuts');
+const btnCloseShortcuts = document.getElementById('btn-close-shortcuts');
+const shortcutsModal = document.getElementById('shortcuts-modal');
 
 // Stats elements
 const statUnsubscribed = document.getElementById('stat-unsubscribed');
@@ -24,12 +27,108 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     await loadStats();
     await checkCurrentEmail();
+    await checkProcessingState();
+    await loadPersistedResults();
     setupEventListeners();
+    setupStorageListener();
   } catch (error) {
     console.error('Error initializing popup:', error);
     // Still show the popup even if initialization fails
   }
 });
+
+/**
+ * Check if processing is currently active and show controls
+ */
+async function checkProcessingState() {
+  try {
+    chrome.storage.local.get(['processingActive', 'processingPaused', 'processingStopped'], (result) => {
+      if (result.processingActive && !result.processingStopped) {
+        // Processing is active, show controls
+        const processingControls = document.getElementById('processing-controls');
+        const btnPause = document.getElementById('btn-pause-processing');
+        const btnResume = document.getElementById('btn-resume-processing');
+        const btnStop = document.getElementById('btn-stop-processing');
+        const btnProcessEmails = document.getElementById('btn-process-emails');
+        
+        processingControls.style.display = 'block';
+        btnProcessEmails.disabled = true;
+        
+        // Show pause or resume based on state
+        if (result.processingPaused) {
+          btnPause.style.display = 'none';
+          btnResume.style.display = 'inline-block';
+        } else {
+          btnPause.style.display = 'inline-block';
+          btnResume.style.display = 'none';
+        }
+        
+        // Setup handlers (work from any tab)
+        btnPause.onclick = () => {
+          chrome.tabs.query({ url: 'https://mail.google.com/*' }, (tabs) => {
+            tabs.forEach(gmailTab => {
+              chrome.tabs.sendMessage(gmailTab.id, { action: 'pauseProcessing' });
+            });
+          });
+          chrome.storage.local.set({ processingPaused: true });
+        };
+        
+        btnResume.onclick = () => {
+          chrome.tabs.query({ url: 'https://mail.google.com/*' }, (tabs) => {
+            tabs.forEach(gmailTab => {
+              chrome.tabs.sendMessage(gmailTab.id, { action: 'resumeProcessing' });
+            });
+          });
+          chrome.storage.local.set({ processingPaused: false });
+        };
+        
+        btnStop.onclick = () => {
+          chrome.tabs.query({ url: 'https://mail.google.com/*' }, (tabs) => {
+            tabs.forEach(gmailTab => {
+              chrome.tabs.sendMessage(gmailTab.id, { action: 'stopProcessing' });
+            });
+          });
+          chrome.storage.local.set({ processingActive: false, processingPaused: false, processingStopped: true });
+        };
+      } else {
+        // Processing is not active, hide controls
+        const processingControls = document.getElementById('processing-controls');
+        const btnProcessEmails = document.getElementById('btn-process-emails');
+        if (processingControls) {
+          processingControls.style.display = 'none';
+        }
+        if (btnProcessEmails) {
+          btnProcessEmails.disabled = false;
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error checking processing state:', error);
+  }
+}
+
+/**
+ * Listen for storage changes to update UI in real-time
+ */
+function setupStorageListener() {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local') {
+      // Check if processing state changed
+      if (changes.processingActive || changes.processingPaused || changes.processingStopped) {
+        checkProcessingState();
+      }
+      
+      // Check if results were updated (for real-time updates during processing)
+      if (changes.persistedResults) {
+        const newResults = changes.persistedResults.newValue;
+        if (newResults && newResults.length > 0) {
+          // Update the results table in real-time
+          displayResults(newResults);
+        }
+      }
+    }
+  });
+}
 
 function setupEventListeners() {
   btnUnsubscribe.addEventListener('click', handleUnsubscribe);
@@ -43,6 +142,92 @@ function setupEventListeners() {
     chrome.runtime.openOptionsPage();
   });
   btnClearResults.addEventListener('click', clearResults);
+  
+  // Setup processing control handlers (these work from any tab)
+  const btnPause = document.getElementById('btn-pause-processing');
+  const btnResume = document.getElementById('btn-resume-processing');
+  const btnStop = document.getElementById('btn-stop-processing');
+  
+  if (btnPause) {
+    btnPause.addEventListener('click', () => {
+      chrome.tabs.query({ url: 'https://mail.google.com/*' }, (tabs) => {
+        tabs.forEach(gmailTab => {
+          chrome.tabs.sendMessage(gmailTab.id, { action: 'pauseProcessing' });
+        });
+      });
+      chrome.storage.local.set({ processingPaused: true });
+    });
+  }
+  
+  if (btnResume) {
+    btnResume.addEventListener('click', () => {
+      chrome.tabs.query({ url: 'https://mail.google.com/*' }, (tabs) => {
+        tabs.forEach(gmailTab => {
+          chrome.tabs.sendMessage(gmailTab.id, { action: 'resumeProcessing' });
+        });
+      });
+      chrome.storage.local.set({ processingPaused: false });
+    });
+  }
+  
+  if (btnStop) {
+    btnStop.addEventListener('click', () => {
+      chrome.tabs.query({ url: 'https://mail.google.com/*' }, (tabs) => {
+        tabs.forEach(gmailTab => {
+          chrome.tabs.sendMessage(gmailTab.id, { action: 'stopProcessing' });
+        });
+      });
+      chrome.storage.local.set({ processingActive: false, processingPaused: false, processingStopped: true });
+    });
+  }
+  
+  // Keyboard shortcuts modal
+  if (btnShortcuts) {
+    btnShortcuts.addEventListener('click', () => {
+      shortcutsModal.classList.add('active');
+    });
+  }
+  
+  if (btnCloseShortcuts) {
+    btnCloseShortcuts.addEventListener('click', () => {
+      shortcutsModal.classList.remove('active');
+    });
+  }
+  
+  // Close modal when clicking outside
+  if (shortcutsModal) {
+    shortcutsModal.addEventListener('click', (e) => {
+      if (e.target === shortcutsModal) {
+        shortcutsModal.classList.remove('active');
+      }
+    });
+  }
+  
+  // Preview item modal handlers
+  const previewItemModal = document.getElementById('preview-item-modal');
+  const btnClosePreviewModal = document.getElementById('btn-close-preview-modal');
+  const btnAddWhitelistFromPreview = document.getElementById('btn-add-whitelist-from-preview');
+  const btnAddBlacklistFromPreview = document.getElementById('btn-add-blacklist-from-preview');
+  
+  if (btnClosePreviewModal) {
+    btnClosePreviewModal.addEventListener('click', closePreviewItemModal);
+  }
+  
+  if (previewItemModal) {
+    previewItemModal.addEventListener('click', (e) => {
+      if (e.target === previewItemModal) {
+        closePreviewItemModal();
+      }
+    });
+  }
+  
+  if (btnAddWhitelistFromPreview) {
+    btnAddWhitelistFromPreview.addEventListener('click', handleAddToWhitelistFromPreview);
+  }
+  
+  if (btnAddBlacklistFromPreview) {
+    btnAddBlacklistFromPreview.addEventListener('click', handleAddToBlacklistFromPreview);
+  }
 }
 
 async function loadStats() {
@@ -177,30 +362,27 @@ async function handleProcessEmails() {
               }
             }
             
-            // Show processing controls
+            // Mark processing as active
+            chrome.storage.local.set({ processingActive: true, processingPaused: false, processingStopped: false });
+            
+            // Clear persisted results when starting new processing
+            chrome.storage.local.remove(['persistedResults']);
+            
+            // Show processing controls (handlers are already set up in setupEventListeners)
             document.getElementById('processing-controls').style.display = 'block';
             const btnPause = document.getElementById('btn-pause-processing');
             const btnResume = document.getElementById('btn-resume-processing');
-            const btnStop = document.getElementById('btn-stop-processing');
             
-            // Setup pause/resume/stop handlers
-            btnPause.onclick = () => {
-              chrome.tabs.sendMessage(tab.id, { action: 'pauseProcessing' });
-              btnPause.style.display = 'none';
-              btnResume.style.display = 'inline-block';
-            };
-            
-            btnResume.onclick = () => {
-              chrome.tabs.sendMessage(tab.id, { action: 'resumeProcessing' });
-              btnResume.style.display = 'none';
-              btnPause.style.display = 'inline-block';
-            };
-            
-            btnStop.onclick = () => {
-              chrome.tabs.sendMessage(tab.id, { action: 'stopProcessing' });
-              document.getElementById('processing-controls').style.display = 'none';
-              btnProcessEmails.disabled = false;
-            };
+            // Update button visibility based on current state
+            chrome.storage.local.get(['processingPaused'], (result) => {
+              if (result.processingPaused) {
+                btnPause.style.display = 'none';
+                btnResume.style.display = 'inline-block';
+              } else {
+                btnPause.style.display = 'inline-block';
+                btnResume.style.display = 'none';
+              }
+            });
             
             chrome.tabs.sendMessage(tab.id, {
               action: 'processEmails',
@@ -211,6 +393,9 @@ async function handleProcessEmails() {
                 autoDelete: autoDelete
               }
             }, async (response) => {
+              // Mark processing as inactive
+              chrome.storage.local.set({ processingActive: false, processingPaused: false, processingStopped: false });
+              
               // Hide processing controls
               document.getElementById('processing-controls').style.display = 'none';
               btnProcessEmails.disabled = false;
@@ -227,10 +412,30 @@ async function handleProcessEmails() {
                   ? `Preview: ${results.processed} processed, ${results.unsubscribed} would unsubscribe, ${results.deleted} would delete${stoppedText}`
                   : `Done: ${results.processed} processed, ${results.unsubscribed} unsubscribed, ${results.deleted} deleted${stoppedText}`;
                 showStatus(previewText, previewOnly ? 'info' : 'success');
-                displayResults(results.emailDetails || []);
+                
+                // Results should already be in storage and displayed via storage listener
+                // But update here as well in case listener didn't fire
+                if (results.emailDetails && results.emailDetails.length > 0) {
+                  displayResults(results.emailDetails);
+                } else {
+                  // Try loading from storage in case popup was closed during processing
+                  chrome.storage.local.get(['persistedResults'], (storageResult) => {
+                    if (storageResult.persistedResults && storageResult.persistedResults.length > 0) {
+                      displayResults(storageResult.persistedResults);
+                    }
+                  });
+                }
+                
                 await loadStats();
               } else {
                 showStatus(response?.message || 'Error processing emails', 'error');
+                
+                // Even on error, try to load any partial results from storage
+                chrome.storage.local.get(['persistedResults'], (storageResult) => {
+                  if (storageResult.persistedResults && storageResult.persistedResults.length > 0) {
+                    displayResults(storageResult.persistedResults);
+                  }
+                });
               }
             });
           } catch (error) {
@@ -375,8 +580,13 @@ function showStatus(message, type = 'info') {
 function displayResults(emailDetails) {
   if (!emailDetails || emailDetails.length === 0) {
     resultsSection.style.display = 'none';
+    // Clear persisted results
+    chrome.storage.local.remove(['persistedResults']);
     return;
   }
+  
+  // Save results to storage for persistence
+  chrome.storage.local.set({ persistedResults: emailDetails });
   
   // Clear existing results
   resultsTbody.innerHTML = '';
@@ -433,6 +643,9 @@ function displayResults(emailDetails) {
   // Attach event listeners to action buttons
   attachActionButtonListeners();
   
+  // Attach double-click listeners to table rows
+  attachDoubleClickListeners();
+  
   // Scroll to results
   resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -457,6 +670,26 @@ function attachActionButtonListeners() {
       const row = btn.closest('tr');
       const senderEmail = row.dataset.senderEmail || btn.dataset.sender;
       handleAddToBlacklistFromTable(senderEmail, btn);
+    });
+  });
+}
+
+/**
+ * Attach double-click listeners to preview table rows
+ */
+function attachDoubleClickListeners() {
+  const rows = resultsTbody.querySelectorAll('tr');
+  
+  rows.forEach(row => {
+    // Remove existing listener to avoid duplicates
+    const newRow = row.cloneNode(true);
+    row.parentNode.replaceChild(newRow, row);
+    
+    newRow.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const senderEmail = newRow.dataset.senderEmail || '';
+      const senderName = newRow.dataset.senderName || '';
+      openPreviewItemModal(senderEmail || senderName);
     });
   });
 }
@@ -518,16 +751,33 @@ async function handleAddToBlacklistFromTable(senderEmail, button) {
     });
   } catch (error) {
     button.disabled = false;
-    button.textContent = '🗑️ Blacklist';
+    button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg> Blacklist';
     showStatus('Error: ' + error.message, 'error');
   }
 }
 
 function getUnsubscribeBadge(status, reason) {
   const badges = {
-    'will_unsubscribe': { class: 'will-unsubscribe', text: 'Will Unsubscribe', icon: '✓' },
-    'not_found': { class: 'not-found', text: 'Not Found', icon: '✗' },
-    'error': { class: 'error', text: 'Error', icon: '!' }
+    'will_unsubscribe': { 
+      class: 'will-unsubscribe', 
+      text: 'Will Unsubscribe', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>' 
+    },
+    'not_found': { 
+      class: 'not-found', 
+      text: 'Not Found', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>' 
+    },
+    'protected': { 
+      class: 'protected', 
+      text: 'Protected', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>' 
+    },
+    'error': { 
+      class: 'error', 
+      text: 'Error', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>' 
+    }
   };
   
   const badge = badges[status] || badges['not_found'];
@@ -541,12 +791,36 @@ function getUnsubscribeBadge(status, reason) {
 
 function getDeleteBadge(status, reason, confidence) {
   const badges = {
-    'will_delete': { class: 'will-delete', text: 'Will Delete', icon: '🗑️' },
-    'will_not_delete': { class: 'will-not-delete', text: 'Keep', icon: '✓' },
-    'protected': { class: 'protected', text: 'Protected', icon: '🛡️' },
-    'uncertain': { class: 'uncertain', text: 'Uncertain', icon: '?' },
-    'likely_legitimate': { class: 'likely-legitimate', text: 'Legitimate', icon: '✓' },
-    'error': { class: 'error', text: 'Error', icon: '!' }
+    'will_delete': { 
+      class: 'will-delete', 
+      text: 'Will Delete', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>' 
+    },
+    'will_not_delete': { 
+      class: 'will-not-delete', 
+      text: 'Keep', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>' 
+    },
+    'protected': { 
+      class: 'protected', 
+      text: 'Protected', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>' 
+    },
+    'uncertain': { 
+      class: 'uncertain', 
+      text: 'Uncertain', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>' 
+    },
+    'likely_legitimate': { 
+      class: 'likely-legitimate', 
+      text: 'Legitimate', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>' 
+    },
+    'error': { 
+      class: 'error', 
+      text: 'Error', 
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>' 
+    }
   };
   
   const badge = badges[status] || badges['will_not_delete'];
@@ -562,12 +836,137 @@ function getDeleteBadge(status, reason, confidence) {
 function clearResults() {
   resultsTbody.innerHTML = '';
   resultsSection.style.display = 'none';
+  // Clear persisted results
+  chrome.storage.local.remove(['persistedResults']);
+}
+
+/**
+ * Load persisted results from storage when popup opens
+ */
+async function loadPersistedResults() {
+  try {
+    chrome.storage.local.get(['persistedResults'], (result) => {
+      if (result.persistedResults && result.persistedResults.length > 0) {
+        // Restore the results table
+        displayResults(result.persistedResults);
+      }
+    });
+  } catch (error) {
+    console.error('Error loading persisted results:', error);
+  }
 }
 
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * Open preview item modal for double-clicked row
+ */
+function openPreviewItemModal(email) {
+  const modal = document.getElementById('preview-item-modal');
+  const emailDisplay = document.getElementById('preview-modal-email');
+  
+  if (!email) {
+    showStatus('No email information available', 'error');
+    return;
+  }
+  
+  // Extract domain if it's a full email
+  const domain = extractDomainFromEmail(email);
+  const displayText = domain || email;
+  
+  emailDisplay.textContent = `Add "${displayText}" to:`;
+  modal.classList.add('active');
+  
+  // Store the email/domain for the action buttons
+  modal.dataset.email = displayText;
+}
+
+/**
+ * Close preview item modal
+ */
+function closePreviewItemModal() {
+  const modal = document.getElementById('preview-item-modal');
+  modal.classList.remove('active');
+}
+
+/**
+ * Extract domain from email address
+ */
+function extractDomainFromEmail(email) {
+  if (!email) return '';
+  
+  // If it's already a domain (starts with @ or no @), return as is
+  if (email.startsWith('@') || !email.includes('@')) {
+    return email.startsWith('@') ? email : `@${email}`;
+  }
+  
+  // Extract domain from email
+  const match = email.match(/@([^@]+)$/);
+  if (match) {
+    return `@${match[1]}`;
+  }
+  
+  return email;
+}
+
+/**
+ * Handle add to whitelist from preview modal
+ */
+function handleAddToWhitelistFromPreview() {
+  const modal = document.getElementById('preview-item-modal');
+  const email = modal.dataset.email;
+  
+  if (!email) {
+    showStatus('No email information available', 'error');
+    return;
+  }
+  
+  chrome.storage.sync.get(['whitelist'], (result) => {
+    const whitelist = result.whitelist || [];
+    if (whitelist.includes(email)) {
+      showStatus(`"${email}" is already in whitelist`, 'info');
+      closePreviewItemModal();
+      return;
+    }
+    
+    whitelist.push(email);
+    chrome.storage.sync.set({ whitelist }, () => {
+      showStatus(`Added "${email}" to whitelist`, 'success');
+      closePreviewItemModal();
+    });
+  });
+}
+
+/**
+ * Handle add to blacklist from preview modal
+ */
+function handleAddToBlacklistFromPreview() {
+  const modal = document.getElementById('preview-item-modal');
+  const email = modal.dataset.email;
+  
+  if (!email) {
+    showStatus('No email information available', 'error');
+    return;
+  }
+  
+  chrome.storage.sync.get(['blacklist'], (result) => {
+    const blacklist = result.blacklist || [];
+    if (blacklist.includes(email)) {
+      showStatus(`"${email}" is already in blacklist`, 'info');
+      closePreviewItemModal();
+      return;
+    }
+    
+    blacklist.push(email);
+    chrome.storage.sync.set({ blacklist }, () => {
+      showStatus(`Added "${email}" to blacklist`, 'success');
+      closePreviewItemModal();
+    });
+  });
 }
 
 async function handleDeleteUnread() {

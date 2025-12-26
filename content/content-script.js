@@ -100,44 +100,122 @@ function getCurrentEmailData() {
   // Extract email data
   const emailData = extractEmailData(emailView);
   
-  // Try to get more info from Gmail's structure
-  // Gmail stores sender info in various places
+  // Try multiple methods to get sender email - Gmail's DOM structure varies
+  // Method 1: Try to find element with email attribute
+  const headerWithEmail = emailView.querySelector('[email]') || 
+                          document.querySelector('.gD[email]') ||
+                          document.querySelector('[data-email]');
+  
+  if (headerWithEmail) {
+    const emailAttr = headerWithEmail.getAttribute('email') || 
+                     headerWithEmail.getAttribute('data-email');
+    if (emailAttr && emailAttr.includes('@')) {
+      emailData.senderEmail = emailAttr.trim();
+    }
+  }
+  
+  // Method 2: Try to find sender header element
   const header = emailView.querySelector('.gD') || 
                  emailView.querySelector('.go') ||
-                 emailView.querySelector('[email]') ||
-                 emailView.querySelector('.go');
+                 emailView.querySelector('.g2') ||
+                 emailView.querySelector('[role="main"] .gD');
   
-  if (header) {
+  if (header && !emailData.senderEmail) {
+    // First try the email attribute
     const emailAttr = header.getAttribute('email');
-    if (emailAttr) {
-      emailData.senderEmail = emailAttr;
+    if (emailAttr && emailAttr.includes('@')) {
+      emailData.senderEmail = emailAttr.trim();
     } else {
-      // Try to extract from text content
-      const emailMatch = header.textContent?.match(/[\w\.-]+@[\w\.-]+\.\w+/);
-      if (emailMatch) {
-        emailData.senderEmail = emailMatch[0];
+      // Get all text content from header and its children (handles split text nodes)
+      let fullText = '';
+      if (header.innerText) {
+        fullText = header.innerText.trim();
+      } else {
+        // Fallback: recursively get text from all child nodes
+        const walker = document.createTreeWalker(
+          header,
+          NodeFilter.SHOW_TEXT,
+          null,
+          false
+        );
+        let node;
+        while (node = walker.nextNode()) {
+          fullText += node.textContent;
+        }
+        fullText = fullText.trim();
+      }
+      
+      // Try to extract email from full text using improved regex
+      // This regex handles emails with various formats
+      const emailMatch = fullText.match(/[\w\.\+\-]+@[\w\.\-]+\.[\w]{2,}/);
+      if (emailMatch && emailMatch[0].length > 3) { // Ensure we got a real email, not just a fragment
+        emailData.senderEmail = emailMatch[0].trim();
       }
     }
     
     // Get sender name (text before email or full text)
-    const headerText = header.textContent?.trim() || '';
+    let headerText = '';
+    if (header.innerText) {
+      headerText = header.innerText.trim();
+    } else {
+      headerText = header.textContent?.trim() || '';
+    }
+    
     if (headerText && !headerText.includes('@')) {
       emailData.senderName = headerText;
-    } else if (headerText) {
+    } else if (headerText && emailData.senderEmail) {
       // Extract name before email
-      const nameMatch = headerText.match(/^(.+?)\s*[\w\.-]+@/);
-      if (nameMatch) {
-        emailData.senderName = nameMatch[1].trim();
+      const emailIndex = headerText.indexOf(emailData.senderEmail);
+      if (emailIndex > 0) {
+        emailData.senderName = headerText.substring(0, emailIndex).trim();
+      } else {
+        // Try regex to extract name
+        const nameMatch = headerText.match(/^(.+?)\s*[\w\.\+\-]+@/);
+        if (nameMatch) {
+          emailData.senderName = nameMatch[1].trim();
+        }
       }
     }
   }
   
-  // Try alternative method to get sender from Gmail's thread view
-  if (!emailData.senderEmail) {
-    const threadHeader = document.querySelector('.gD[email]');
+  // Method 3: Try alternative method to get sender from Gmail's thread view
+  if (!emailData.senderEmail || emailData.senderEmail.length < 5) {
+    const threadHeader = document.querySelector('.gD[email]') ||
+                        document.querySelector('[email]');
     if (threadHeader) {
-      emailData.senderEmail = threadHeader.getAttribute('email') || emailData.senderEmail;
-      emailData.senderName = threadHeader.textContent?.trim() || emailData.senderName;
+      const emailAttr = threadHeader.getAttribute('email');
+      if (emailAttr && emailAttr.includes('@') && emailAttr.length > 5) {
+        emailData.senderEmail = emailAttr.trim();
+      }
+      if (!emailData.senderName) {
+        const nameText = threadHeader.innerText || threadHeader.textContent;
+        if (nameText && !nameText.includes('@')) {
+          emailData.senderName = nameText.trim();
+        }
+      }
+    }
+  }
+  
+  // Method 4: Try to find email in the entire email view using a comprehensive search
+  if (!emailData.senderEmail || emailData.senderEmail.length < 5) {
+    // Search for common email patterns in the header area
+    const headerArea = emailView.querySelector('.gD') || 
+                      emailView.querySelector('.go') ||
+                      emailView;
+    
+    if (headerArea) {
+      // Get all text content from header area
+      const allText = headerArea.innerText || headerArea.textContent || '';
+      // Use a more comprehensive email regex
+      const emailPattern = /[a-zA-Z0-9][a-zA-Z0-9\.\+\-_]*@[a-zA-Z0-9][a-zA-Z0-9\.\-]*\.[a-zA-Z]{2,}/g;
+      const matches = allText.match(emailPattern);
+      if (matches && matches.length > 0) {
+        // Take the first valid email (usually the sender)
+        const validEmail = matches.find(email => email.length > 5 && email.includes('@'));
+        if (validEmail) {
+          emailData.senderEmail = validEmail.trim();
+        }
+      }
     }
   }
   
@@ -162,40 +240,74 @@ function extractEmailData(emailElement) {
   
   if (!emailElement) return data;
   
-  // Try to find sender info
-  const senderSelectors = ['.gD', '[email]', '.go'];
+  // Try to find sender info with improved extraction
+  const senderSelectors = ['.gD', '[email]', '.go', '[data-email]'];
   for (const selector of senderSelectors) {
     const senderEl = emailElement.querySelector(selector);
     if (senderEl) {
-      data.senderEmail = senderEl.getAttribute('email') || senderEl.textContent || '';
-      data.senderName = senderEl.textContent || '';
-      break;
+      // First try email attribute
+      const emailAttr = senderEl.getAttribute('email') || senderEl.getAttribute('data-email');
+      if (emailAttr && emailAttr.includes('@') && emailAttr.length > 5) {
+        data.senderEmail = emailAttr.trim();
+      } else {
+        // Try to extract from text content using innerText (handles split nodes better)
+        const textContent = senderEl.innerText || senderEl.textContent || '';
+        const emailMatch = textContent.match(/[a-zA-Z0-9][a-zA-Z0-9\.\+\-_]*@[a-zA-Z0-9][a-zA-Z0-9\.\-]*\.[a-zA-Z]{2,}/);
+        if (emailMatch && emailMatch[0].length > 5) {
+          data.senderEmail = emailMatch[0].trim();
+        }
+      }
+      
+      // Get sender name
+      const nameText = senderEl.innerText || senderEl.textContent || '';
+      if (nameText && data.senderEmail) {
+        // Extract name before email
+        const emailIndex = nameText.indexOf(data.senderEmail);
+        if (emailIndex > 0) {
+          data.senderName = nameText.substring(0, emailIndex).trim();
+        } else if (!nameText.includes('@')) {
+          data.senderName = nameText.trim();
+        }
+      } else if (nameText && !nameText.includes('@')) {
+        data.senderName = nameText.trim();
+      }
+      
+      if (data.senderEmail) break;
     }
   }
   
   // Try to find subject
-  const subjectEl = emailElement.querySelector('h2') || emailElement.querySelector('.hP');
+  const subjectEl = emailElement.querySelector('h2') || 
+                   emailElement.querySelector('.hP') ||
+                   emailElement.querySelector('[data-thread-perm-id] + div h2');
   if (subjectEl) {
-    data.subject = subjectEl.textContent || '';
+    data.subject = (subjectEl.innerText || subjectEl.textContent || '').trim();
   }
   
   // Try to find date
-  const dateEl = emailElement.querySelector('.g3') || emailElement.querySelector('[title*=":"]');
+  const dateEl = emailElement.querySelector('.g3') || 
+                emailElement.querySelector('[title*=":"]') ||
+                emailElement.querySelector('.g3[title]');
   if (dateEl) {
     const dateText = dateEl.getAttribute('title') || dateEl.textContent || '';
-    data.date = new Date(dateText);
+    if (dateText) {
+      data.date = new Date(dateText);
+    }
   }
   
   // Check for attachments
   data.hasAttachments = !!emailElement.querySelector('[data-attachment-id]') ||
-                        !!emailElement.querySelector('.aZo');
+                        !!emailElement.querySelector('.aZo') ||
+                        !!emailElement.querySelector('[aria-label*="attachment" i]');
   
   // Check if starred
   data.isStarred = !!emailElement.querySelector('.T-KT') ||
-                   emailElement.querySelector('[aria-label*="starred" i]');
+                   !!emailElement.querySelector('[aria-label*="starred" i]') ||
+                   !!emailElement.querySelector('[data-tooltip*="starred" i]');
   
   // Check if important
-  data.isImportant = !!emailElement.querySelector('[aria-label*="important" i]');
+  data.isImportant = !!emailElement.querySelector('[aria-label*="important" i]') ||
+                     !!emailElement.querySelector('[data-tooltip*="important" i]');
   
   return data;
 }
@@ -495,18 +607,56 @@ async function processUnsubscribeForCurrentEmail() {
             return results;
           }
           
-          // For regular links, scroll into view and click
-          link.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          await delay(200);
+          // For regular links, open in new tab without focusing
+          // Store original target to restore if needed
+          const originalTarget = link.element.target;
+          const href = link.element.href || link.href;
           
-          link.element.click();
-          results.executed.push({ 
-            type: 'link', 
-            href: link.href, 
-            method: link.method || 'GET',
-            confidence: link.confidence || 'medium',
-            success: true 
-          });
+          // Notify background that a tab will be opened
+          chrome.runtime.sendMessage({ action: 'unsubscribeTabOpened' });
+          
+          // Open link in new tab without focusing
+          // Use chrome.tabs.create to have control over focus
+          if (href && href.startsWith('http')) {
+            chrome.runtime.sendMessage({
+              action: 'openUnsubscribeTab',
+              url: href
+            });
+            
+            results.executed.push({ 
+              type: 'link', 
+              href: href, 
+              method: link.method || 'GET',
+              confidence: link.confidence || 'medium',
+              success: true 
+            });
+            
+            // Wait a bit for the tab to open
+            await delay(300);
+            
+            return results;
+          } else {
+            // Fallback: use target="_blank" if URL is not valid
+            link.element.target = '_blank';
+            link.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            await delay(200);
+            link.element.click();
+            
+            results.executed.push({ 
+              type: 'link', 
+              href: href, 
+              method: link.method || 'GET',
+              confidence: link.confidence || 'medium',
+              success: true 
+            });
+            
+            // Restore original target after a delay
+            setTimeout(() => {
+              if (link.element) {
+                link.element.target = originalTarget || '';
+              }
+            }, 1000);
+          }
           
           // Wait a bit for the action to complete
           await delay(500);
@@ -884,12 +1034,17 @@ async function checkIfWhitelisted(emailData) {
  */
 async function handleUnsubscribe() {
   try {
+    // Notify background that unsubscribe operation is starting
+    chrome.runtime.sendMessage({ action: 'unsubscribeOperationStart' });
+    
     const emailData = getCurrentEmailData();
     
     // Check whitelist BEFORE attempting unsubscribe
     if (emailData) {
       const isWhitelisted = await checkIfWhitelisted(emailData);
       if (isWhitelisted) {
+        // Notify background that operation ended
+        chrome.runtime.sendMessage({ action: 'unsubscribeOperationEnd' });
         return {
           success: false,
           results: { found: [], executed: [], errors: [] },
@@ -899,6 +1054,9 @@ async function handleUnsubscribe() {
     }
     
     const results = await processUnsubscribeForCurrentEmail();
+    
+    // Notify background that operation ended
+    chrome.runtime.sendMessage({ action: 'unsubscribeOperationEnd' });
     
     if (results.executed.length > 0) {
       // Update stats
@@ -942,6 +1100,9 @@ async function handleUnsubscribe() {
   } catch (error) {
     console.error('Unsubscribe error:', error);
     
+    // Notify background that operation ended (even on error)
+    chrome.runtime.sendMessage({ action: 'unsubscribeOperationEnd' });
+    
     // Log failed unsubscribe attempt
     const emailData = getCurrentEmailData();
     if (emailData) {
@@ -974,6 +1135,11 @@ async function handleProcessEmails(options = {}) {
         autoDelete = false
       } = options;
       
+      // Notify background that batch unsubscribe operation is starting
+      if (autoUnsubscribe) {
+        chrome.runtime.sendMessage({ action: 'unsubscribeOperationStart' });
+      }
+      
       const processResults = {
         processed: 0,
         unsubscribed: 0,
@@ -997,8 +1163,12 @@ async function handleProcessEmails(options = {}) {
         
         const emailsToProcess = emailElements.slice(0, maxEmails);
         
-        // Reset pause/stop flags
-        chrome.storage.local.set({ processingPaused: false, processingStopped: false });
+        // Mark processing as active and reset pause/stop flags
+        chrome.storage.local.set({ 
+          processingActive: true, 
+          processingPaused: false, 
+          processingStopped: false 
+        });
         
         for (let i = 0; i < emailsToProcess.length; i++) {
           // Check for pause/stop
@@ -1014,6 +1184,16 @@ async function handleProcessEmails(options = {}) {
           if (state.stopped) {
             processResults.stopped = true;
             processResults.message = 'Processing stopped by user';
+            // Mark processing as inactive
+            chrome.storage.local.set({ 
+              processingActive: false, 
+              processingPaused: false, 
+              processingStopped: true 
+            });
+            // Notify background that operation ended
+            if (autoUnsubscribe) {
+              chrome.runtime.sendMessage({ action: 'unsubscribeOperationEnd' });
+            }
             break;
           }
           
@@ -1031,6 +1211,16 @@ async function handleProcessEmails(options = {}) {
             if (newState.stopped) {
               processResults.stopped = true;
               processResults.message = 'Processing stopped by user';
+              // Mark processing as inactive
+              chrome.storage.local.set({ 
+                processingActive: false, 
+                processingPaused: false, 
+                processingStopped: true 
+              });
+              // Notify background that operation ended
+              if (autoUnsubscribe) {
+                chrome.runtime.sendMessage({ action: 'unsubscribeOperationEnd' });
+              }
               break;
             }
             if (!newState.paused) break;
@@ -1063,7 +1253,7 @@ async function handleProcessEmails(options = {}) {
             }
             if (!emailData) {
               processResults.skipped++;
-              processResults.emailDetails.push({
+              const skippedDetail = {
                 index: i,
                 sender: 'Unknown',
                 subject: 'Could not extract',
@@ -1072,7 +1262,15 @@ async function handleProcessEmails(options = {}) {
                 deleteStatus: 'uncertain',
                 deleteReason: 'Could not extract email data - skipped',
                 confidence: 0
+              };
+              processResults.emailDetails.push(skippedDetail);
+              
+              // Save results incrementally even for skipped emails
+              chrome.storage.local.set({ 
+                persistedResults: processResults.emailDetails,
+                processingResults: processResults
               });
+              
               continue;
             }
             
@@ -1134,7 +1332,7 @@ async function handleProcessEmails(options = {}) {
             }
             
             // Store detailed email information
-            processResults.emailDetails.push({
+            const emailDetail = {
               index: i,
               sender: emailData.senderName || emailData.senderEmail || 'Unknown',
               senderEmail: emailData.senderEmail || '',
@@ -1146,6 +1344,14 @@ async function handleProcessEmails(options = {}) {
               confidence: deleteDecision.confidence || 0,
               isStarred: emailData.isStarred || false,
               isImportant: emailData.isImportant || false
+            };
+            
+            processResults.emailDetails.push(emailDetail);
+            
+            // Save results incrementally to storage so they persist even if popup is closed
+            chrome.storage.local.set({ 
+              persistedResults: processResults.emailDetails,
+              processingResults: processResults
             });
             
             // Execute actions if not in preview mode
@@ -1208,8 +1414,9 @@ async function handleProcessEmails(options = {}) {
             processResults.errors.push({ index: i, error: error.message });
             // Only add to emailDetails if it's a critical error
             // For minor errors, we'll just log it
+            let errorDetail;
             if (error.message && !error.message.includes('timeout') && !error.message.includes('not found')) {
-              processResults.emailDetails.push({
+              errorDetail = {
                 index: i,
                 sender: 'Error',
                 subject: 'Processing failed',
@@ -1218,11 +1425,12 @@ async function handleProcessEmails(options = {}) {
                 deleteStatus: 'error',
                 deleteReason: `Error: ${error.message}`,
                 confidence: 0
-              });
+              };
+              processResults.emailDetails.push(errorDetail);
             } else {
               // For non-critical errors, mark as skipped
               processResults.skipped++;
-              processResults.emailDetails.push({
+              errorDetail = {
                 index: i,
                 sender: 'Unknown',
                 subject: 'Skipped',
@@ -1231,8 +1439,15 @@ async function handleProcessEmails(options = {}) {
                 deleteStatus: 'uncertain',
                 deleteReason: 'Email processing skipped',
                 confidence: 0
-              });
+              };
+              processResults.emailDetails.push(errorDetail);
             }
+            
+            // Save results incrementally even for errors
+            chrome.storage.local.set({ 
+              persistedResults: processResults.emailDetails,
+              processingResults: processResults
+            });
             console.error(`Error processing email ${i}:`, error);
           }
         }
@@ -1246,6 +1461,24 @@ async function handleProcessEmails(options = {}) {
           chrome.storage.local.set({ stats });
         });
         
+        // Save final results to storage (in case popup was closed during processing)
+        chrome.storage.local.set({ 
+          persistedResults: processResults.emailDetails,
+          processingResults: processResults
+        });
+        
+        // Mark processing as inactive
+        chrome.storage.local.set({ 
+          processingActive: false, 
+          processingPaused: false, 
+          processingStopped: false 
+        });
+        
+        // Notify background that batch unsubscribe operation ended
+        if (autoUnsubscribe) {
+          chrome.runtime.sendMessage({ action: 'unsubscribeOperationEnd' });
+        }
+        
         resolve({
           success: true,
           results: processResults,
@@ -1254,6 +1487,19 @@ async function handleProcessEmails(options = {}) {
         
       } catch (error) {
         console.error('Process emails error:', error);
+        
+        // Mark processing as inactive
+        chrome.storage.local.set({ 
+          processingActive: false, 
+          processingPaused: false, 
+          processingStopped: false 
+        });
+        
+        // Notify background that operation ended (even on error)
+        if (autoUnsubscribe) {
+          chrome.runtime.sendMessage({ action: 'unsubscribeOperationEnd' });
+        }
+        
         resolve({
           success: false,
           error: error.message,

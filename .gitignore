@@ -24,3 +24,7 @@ build/
 *.tmp
 *.temp
 
+# Documentation files (keep README.md)
+*.md
+!README.md
+
